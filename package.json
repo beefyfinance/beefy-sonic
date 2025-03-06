@@ -1,0 +1,15 @@
+{
+  "name": "beefy-sonic",
+  "version": "1.0.0",
+  "description": "Beefy Staked Sonic",
+  "main": "index.js",
+  "author": "Beefy",
+  "license": "MIT",
+  "devDependencies": {
+    "@openzeppelin/contracts": "npm:@openzeppelin/contracts",
+    "@openzeppelin/contracts-upgradeable": "npm:@openzeppelin/contracts-upgradeable"
+  },
+  "dependencies": {
+    "web3-utils": "^4.3.3"
+  }
+}

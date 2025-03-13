@@ -63,6 +63,7 @@ interface IBeefySonic {
    error InvalidValidatorIndex();
    error InvalidLiquidityFee();
    error NothingToWithdraw();
+   error WithdrawNotReady();
 
    event Notify(address notifier, uint256 amount);
    event Deposit(uint256 TVL, uint256 amountDeposited);

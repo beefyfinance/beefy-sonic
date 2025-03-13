@@ -82,20 +82,24 @@ contract BeefySonic is
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override whenNotPaused {
         BeefySonicStorage storage $ = getBeefySonicStorage(); 
 
-        if (assets == 0 || shares == 0) revert ZeroDeposit();  
+        if (assets == 0 || shares == 0) revert ZeroDeposit();
+
+        // Delegate assets to the validator only if a single validator can handle the deposit amount
+        uint256 validatorId = _getValidatorToDeposit(assets);  
+
+        // Update validator delegations and stored total
+        $.validators[validatorId].delegations += assets;
+        $.storedTotal += assets;
+
+        // Transfer tokens and mint shares
+        super._deposit(caller, receiver, assets, shares);
 
         // Withdraw assets from the wrapped native token
         IWrappedNative($.want).withdraw(assets);
 
-        // Get the validator to deposit to
-        uint256 validatorId = _getValidatorToDeposit(assets);
-        
         // Delegate assets to the validator only if a single validator can handle the deposit amount
         ISFC($.stakingContract).delegate{value: assets}(validatorId);
-        $.validators[validatorId].delegations += assets;
-        $.storedTotal += assets;
 
-        super._deposit(caller, receiver, assets, shares);
         emit Deposit(totalAssets(), assets);
     }
 
@@ -189,7 +193,8 @@ contract BeefySonic is
         BeefySonicStorage storage $ = getBeefySonicStorage();
         WithdrawRequest storage request = $.withdrawRequests[msg.sender][index];
         
-        if (request.processed) revert NothingToWithdraw();
+        if (request.processed) return 0;
+        if (request.requestTime + $.withdrawDuration < block.timestamp) return 0;
         
         uint256 before = address(this).balance;
         for (uint256 j; j < request.requestIds.length; j++) {

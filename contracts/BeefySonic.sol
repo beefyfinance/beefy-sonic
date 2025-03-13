@@ -237,7 +237,6 @@ contract BeefySonic is
 
         // Update total pending redeem assets
         $.totalPendingRedeemAssets -= request.assets;
-        $.storedTotal -= request.assets;
 
         // Withdraw assets from the SFC
         uint256 amountWithdrawn = _withdrawFromSFC(_requestId, _controller);
@@ -272,7 +271,6 @@ contract BeefySonic is
 
         // Update total pending redeem assets   
         $.totalPendingRedeemAssets -= request.assets;
-        $.storedTotal -= request.assets;
 
         // Withdraw assets from the SFC
         uint256 amountWithdrawn = _withdrawFromSFC(_requestId, _controller);
@@ -459,7 +457,7 @@ contract BeefySonic is
     /// @notice Total assets on this contract
     /// @return total Total amount of assets
     function totalAssets() public view override returns (uint256 total) {
-        total = getBeefySonicStorage().storedTotal - lockedProfit() - getBeefySonicStorage().totalPendingRedeemAssets;
+        total = getBeefySonicStorage().storedTotal - lockedProfit();
     }
 
     /// @notice Get validators to withdraw from

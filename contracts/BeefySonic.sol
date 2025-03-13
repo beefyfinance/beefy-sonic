@@ -363,6 +363,16 @@ contract BeefySonic is
         return 0;
     }
 
+    /// @notice Preview withdraw always reverts for async flows
+    function previewWithdraw(uint256) public pure virtual override returns (uint256) {
+        revert ERC7540AsyncFlow();
+    }
+
+    /// @notice Preview redeem always reverts for async flows
+    function previewRedeem(uint256) public pure virtual override returns (uint256) {
+        revert ERC7540AsyncFlow();
+    }
+
     /// @notice Get the price per full share
     /// @return pricePerFullShare Price per full share
     function getPricePerFullShare() external view returns (uint256) {
@@ -462,7 +472,7 @@ contract BeefySonic is
 
     /// @notice Get validators to withdraw from
     /// @param _assets Amount of assets to withdraw
-    /// @return _validatorIds Array of validator I  Ds
+    /// @return _validatorIds Array of validator IDs
     /// @return _withdrawAmounts Array of withdraw amounts
     function _getValidatorsToWithdraw(uint256 _assets) internal returns (uint256[] memory _validatorIds, uint256[] memory _withdrawAmounts) {
         BeefySonicStorage storage $ = getBeefySonicStorage();

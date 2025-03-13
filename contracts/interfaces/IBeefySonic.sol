@@ -70,6 +70,7 @@ interface IBeefySonic {
    error NotAuthorized();
    error InsufficientBalance();
    error NotClaimableYet();
+   error ERC7540AsyncFlow();
 
    event Notify(address notifier, uint256 amount);
    event Deposit(uint256 TVL, uint256 amountDeposited);

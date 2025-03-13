@@ -30,4 +30,6 @@ interface ISFC {
     function isSlashed(uint256 validatorID) external view returns (bool);
 
     function slashingRefundRatio(uint256 validatorID) external view returns (uint256);
+
+    function constsAddress() external view returns (address);
 }

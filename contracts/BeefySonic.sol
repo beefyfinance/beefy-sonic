@@ -122,7 +122,7 @@ contract BeefySonic is
         uint256 maxDelegatedRatio = IConstantsManager(ISFC($.stakingContract).constsAddress()).maxDelegatedRatio();
 
         // Loop and try to deposit into the first validator in the set with capacity
-        for(uint256 i = 0; i < $.validators.length; i++) {
+        for(uint256 i; i < $.validators.length; ++i) {
             Validator memory validator = $.validators[i];
 
             // Check if the validator is slashed and mark it as inactive if it is
@@ -158,11 +158,8 @@ contract BeefySonic is
 
         // Ensure the owner is the caller or an authorized operator
         if (owner != msg.sender && !$.isOperator[owner][msg.sender]) revert NotAuthorized();
-        
-        // Ensure the owner has enough shares
-        if (IERC20(address(this)).balanceOf(owner) < shares) revert InsufficientBalance();
 
-        // Burn shares of the owner
+        // Burn shares of the owner will revert if shares is > balanceOf(owner)
         _burn(owner, shares);
 
         // Convert shares to assets
@@ -175,7 +172,7 @@ contract BeefySonic is
         uint256[] memory requestIds = new uint256[](validatorIds.length);
 
         // Undelegate assets from the validators
-        for (uint256 i = 0; i < validatorIds.length; i++) {
+        for (uint256 i; i < validatorIds.length; ++i) {
             // Get the next wId, we want this to be unique for each request
             uint256 wId = $.wId;
             requestIds[i] = wId;
@@ -200,6 +197,9 @@ contract BeefySonic is
                 requestIds: requestIds,
                 validatorIds: validatorIds
             });
+        
+        // Add the request ID to the owner's pending requests
+        $.pendingRequests[owner].push($.requestId);
 
         // Increment requestId
         $.requestId++;
@@ -238,6 +238,8 @@ contract BeefySonic is
         // Update total pending redeem assets
         $.totalPendingRedeemAssets -= request.assets;
 
+        _removeRequest(_controller, _requestId);
+
         // Withdraw assets from the SFC
         uint256 amountWithdrawn = _withdrawFromSFC(_requestId, _controller);
         _withdraw(msg.sender, _receiver, _controller, amountWithdrawn, request.shares);
@@ -272,11 +274,48 @@ contract BeefySonic is
         // Update total pending redeem assets   
         $.totalPendingRedeemAssets -= request.assets;
 
+        _removeRequest(_controller, _requestId);
+
         // Withdraw assets from the SFC
         uint256 amountWithdrawn = _withdrawFromSFC(_requestId, _controller);
         _withdraw(msg.sender, _receiver, _controller, amountWithdrawn, request.shares);
         
         return amountWithdrawn;
+    }
+
+    /// @notice Remove a request from the pending requests
+    /// @param _controller Controller address
+    /// @param _requestId Request ID
+    function _removeRequest(address _controller, uint256 _requestId) internal {
+        BeefySonicStorage storage $ = getBeefySonicStorage();
+
+        // Get the pending requests array for the controller
+        uint256[] storage pendingRequests = $.pendingRequests[_controller];
+        
+        // If the array is empty, nothing to do
+        if (pendingRequests.length == 0) return;
+        
+        // Find the index of the request ID
+        uint256 index = type(uint256).max; // Invalid index to start
+        for (uint256 i = 0; i < pendingRequests.length; i++) {
+            if (pendingRequests[i] == _requestId) {
+                index = i;
+                break;
+            }
+        }
+        
+        // If the request ID was not found, nothing to do
+        if (index == type(uint256).max) return;
+        
+        // If it's the last element, just pop it
+        if (index == pendingRequests.length - 1) {
+            pendingRequests.pop();
+            return;
+        }
+        
+        // Otherwise, move the last element to the position of the removed element and pop
+        pendingRequests[index] = pendingRequests[pendingRequests.length - 1];
+        pendingRequests.pop();
     }
 
     function _withdrawFromSFC(uint256 _requestId, address _controller) internal returns (uint256 amountWithdrawn) {
@@ -361,6 +400,14 @@ contract BeefySonic is
         // Return the shares if the request is claimable
         if (request.claimableTimestamp <= block.timestamp) return request.shares;
         return 0;
+    }
+
+    /// @notice Get the pending redeem requests for a user
+    /// @param _controller Controller address
+    /// @return pendingRequests Array of pending requests
+    function userPendingRedeemRequests(address _controller) external view returns (uint256[] memory) {
+        BeefySonicStorage storage $ = getBeefySonicStorage();
+        return $.pendingRequests[_controller];
     }
 
     /// @notice Preview withdraw always reverts for async flows

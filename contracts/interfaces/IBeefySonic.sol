@@ -35,6 +35,8 @@ interface IBeefySonic {
         mapping(address => mapping(address => bool)) isOperator;
         // Redemption requests
         mapping(address => mapping(uint256 => RedemptionRequest)) pendingRedemptions;
+        // Pending requests for each owner
+        mapping(address => uint256[]) pendingRequests;
         // Total queued withdrawals
         uint256 totalPendingRedeemAssets;
         // Validator tracking

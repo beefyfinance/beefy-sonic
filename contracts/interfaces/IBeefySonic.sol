@@ -1,6 +1,5 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
-
 
 interface IBeefySonic {
    struct BeefySonicStorage {
@@ -90,4 +89,78 @@ interface IBeefySonic {
    event LockDurationSet(uint256 oldLockDuration, uint256 newLockDuration);
    event KeeperSet(address indexed oldKeeper, address indexed newKeeper);
    event RedeemRequest(address indexed controller, address indexed owner, uint256 requestId, address indexed caller, uint256 shares);
+
+   /// @notice Request a redeem, interface of EIP - 7540 https://eips.ethereum.org/EIPS/eip-7540
+   /// @param shares Amount of shares to redeem
+   /// @param controller Controller address
+   /// @param owner Owner address
+   /// @return requestId Request ID
+   function requestRedeem(uint256 shares, address controller, address owner) external returns (uint256 requestId);
+
+   /// @notice Get the pending redeem request
+   /// @param _requestId ID of the redeem request
+   /// @param _controller Controller address
+   /// @return shares Amount of shares
+   function pendingRedeemRequest(uint256 _requestId, address _controller) external view returns (uint256 shares);
+
+   /// @notice Get the claimable redeem request
+   /// @param _requestId ID of the redeem request
+   /// @param _controller Controller address
+   /// @return shares Amount of shares
+   function claimableRedeemRequest(uint256 _requestId, address _controller) external view returns (uint256 shares);
+
+   /// @notice Get the price per full share
+   /// @return pricePerFullShare Price per full share
+   function getPricePerFullShare() external view returns (uint256);
+
+   /// @notice Notify the yield to start vesting
+   function harvest() external;
+
+   /// @notice Remaining locked profit after a notification
+   /// @return locked Amount remaining to be vested
+   function lockedProfit() external view returns (uint256 locked);
+
+   /// @notice Add a new validator
+   /// @param validatorId ID of the validator
+   function addValidator(uint256 validatorId) external;
+
+   /// @notice Set a validator's active status
+   /// @param validatorIndex Index of the validator
+   /// @param active Whether the validator is active
+   function setValidatorActive(uint256 validatorIndex, bool active) external;
+
+   /// @notice Set an operator to finalize the claim of the request to withdraw
+   /// @param operator Address of the operator
+   /// @param approved Whether the operator is approved
+   function setOperator(address operator, bool approved) external returns (bool);
+
+   /// @notice Set the Beefy fee recipient
+   /// @param _beefyFeeRecipient Address of the new Beefy fee recipient
+   function setBeefyFeeRecipient(address _beefyFeeRecipient) external;
+
+   /// @notice Set the Beefy fee configuration
+   /// @param _beefyFeeConfig Address of the new Beefy fee configuration
+   function setBeefyFeeConfig(address _beefyFeeConfig) external;
+
+   /// @notice Set the liquidity fee recipient
+   /// @param _liquidityFeeRecipient Address of the new liquidity fee recipient    
+   function setLiquidityFeeRecipient(address _liquidityFeeRecipient) external;
+
+   /// @notice Set the liquidity fee percentage
+   /// @param _liquidityFee Percentage of the fee
+   function setLiquidityFee(uint256 _liquidityFee) external;
+
+   /// @notice Set the keeper
+   /// @param _keeper Address of the new keeper
+   function setKeeper(address _keeper) external;
+
+   /// @notice Set the lock duration
+   /// @param _lockDuration Duration to lock tokens
+   function setLockDuration(uint32 _lockDuration) external;
+
+   /// @notice Pause the contract only callable by the owner or keeper
+   function pause() external;
+
+   /// @notice Unpause the contract only callable by the owner
+   function unpause() external;
 }

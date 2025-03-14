@@ -31,6 +31,10 @@ interface IBeefySonic {
         uint256 requestId;
         // Withdraw ID for SFC request
         uint256 wId;
+        // Minimum harvest amount
+        uint256 minHarvest;
+        // Minimum withdraw amount
+        uint256 minWithdraw;
         // Operator tracking
         mapping(address => mapping(address => bool)) isOperator;
         // Redemption requests
@@ -58,6 +62,7 @@ interface IBeefySonic {
    struct Validator {
         uint256 id;
         uint256 delegations;
+        uint256 lastUndelegateEpoch;
         bool active;
    }
    
@@ -72,6 +77,11 @@ interface IBeefySonic {
    error InsufficientBalance();
    error NotClaimableYet();
    error ERC7540AsyncFlow();
+   error NotReadyForHarvest();
+   error NotEnoughRewards();
+   error ValidatorNotFound();
+   error MinWithdrawNotMet();
+   error WithdrawError();
 
    event Notify(address notifier, uint256 amount);
    event Deposit(uint256 TVL, uint256 amountDeposited);
@@ -90,7 +100,8 @@ interface IBeefySonic {
    event OperatorSet(address indexed owner, address indexed operator, bool approved);
    event LockDurationSet(uint256 oldLockDuration, uint256 newLockDuration);
    event KeeperSet(address indexed oldKeeper, address indexed newKeeper);
-   event RedeemRequest(address indexed controller, address indexed owner, uint256 requestId, address indexed caller, uint256 shares);
+   event MinWithdrawSet(uint256 oldMinWithdraw, uint256 newMinWithdraw);
+   event RedeemRequest(address indexed controller, address indexed owner, uint256 requestId, address indexed caller, uint256 shares, uint32 claimableTimestamp);
 
    /// @notice Request a redeem, interface of EIP - 7540 https://eips.ethereum.org/EIPS/eip-7540
    /// @param shares Amount of shares to redeem

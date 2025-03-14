@@ -32,4 +32,12 @@ interface ISFC {
     function slashingRefundRatio(uint256 validatorID) external view returns (uint256);
 
     function constsAddress() external view returns (address);
+
+    function sealEpoch(uint256[] memory, uint256[] memory, uint256[] memory, uint256[] memory) external;
+
+    function sealEpochValidators(uint256[] memory) external;
+
+    function getEpochValidatorIDs(uint256 epoch) external view returns (uint256[] memory);
+
+    function stashRewards(address delegator, uint256 toValidatorID) external;
 }

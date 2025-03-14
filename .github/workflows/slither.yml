@@ -1,0 +1,22 @@
+name: Slither Analysis
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, reopened]
+    
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    env:
+      FOUNDRY_PROFILE: slither
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Slither
+        uses: crytic/slither-action@v0.4.0
+        id: slither
+        with:
+          sarif: results.sarif
+          fail-on: none
+          node-version: v20.18.0

@@ -8,7 +8,7 @@ import { IBeefySonic } from "./interfaces/IBeefySonic.sol";
 /// @notice Storage utilities for BeefySonic control
 contract BeefySonicStorageUtils {
     /// @dev keccak256(abi.encode(uint256(keccak256("beefy.storage.BeefySonic")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant BeefySonicStorageLocation = 0x62b58b20e3c9a6ebfe98e7c036f01117f270db086cfa27fbd53ec62e54038731;
+    bytes32 private constant BeefySonicStorageLocation = 0xe129f5f787afe84f43d994d232cb3da30ecdd4d65ff3407926c4706d66dc7e00;
 
     /// @dev Get BeefySonic storage
     /// @return $ Storage pointer

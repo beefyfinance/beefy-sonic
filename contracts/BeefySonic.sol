@@ -160,7 +160,7 @@ contract BeefySonic is
     function requestRedeem(uint256 shares, address controller, address owner) external returns (uint256 requestId) {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         // Ensure the owner is the caller or an authorized operator
-        if (owner != msg.sender || !$.isOperator[owner][msg.sender]) revert NotAuthorized();
+        if (owner != msg.sender && !$.isOperator[owner][msg.sender]) revert NotAuthorized();
 
         // Ensure the minimum withdrawal amount is met
         if (shares < $.minWithdraw) revert MinWithdrawNotMet();
@@ -274,7 +274,7 @@ contract BeefySonic is
         BeefySonicStorage storage $ = getBeefySonicStorage();
 
         // Ensure the controller is the caller or an authorized operator
-        if(!(_controller == msg.sender || !$.isOperator[_controller][msg.sender])) revert NotAuthorized();
+        if(!(_controller == msg.sender && !$.isOperator[_controller][msg.sender])) revert NotAuthorized();
        
         RedemptionRequest storage request = $.pendingRedemptions[_controller][_requestId];
         
@@ -309,7 +309,7 @@ contract BeefySonic is
         BeefySonicStorage storage $ = getBeefySonicStorage();
 
         // Ensure the controller is the caller or an authorized operator
-        if(!(_controller == msg.sender || !$.isOperator[_controller][msg.sender])) revert NotAuthorized();
+        if(!(_controller == msg.sender && !$.isOperator[_controller][msg.sender])) revert NotAuthorized();
 
         RedemptionRequest storage request = $.pendingRedemptions[_controller][_requestId];
 

@@ -28,7 +28,7 @@ contract BeefySonicTest is Test {
     uint256 public beefyValidatorId = 31;
     
     function setUp() public {
-        vm.createSelectFork({urlOrAlias: "sonic"});
+        vm.createSelectFork({urlOrAlias: "sonic", blockNumber: 13732080});
         implementation = new BeefySonic();
         beefySonic = BeefySonic(payable(address(_proxy(address(implementation)))));
 

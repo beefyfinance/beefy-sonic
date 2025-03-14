@@ -130,7 +130,8 @@ contract BeefySonic is
 
             // Check if the validator is slashed and mark it as inactive if it is
             bool isSlashed = ISFC($.stakingContract).isSlashed(validator.id);
-            if (isSlashed) {
+            (uint256 isOk,,,,,,) = ISFC($.stakingContract).getValidator(validator.id);
+            if (isSlashed || isOk != 0) {
                 $.validators[i].active = false;
                 continue;
             }

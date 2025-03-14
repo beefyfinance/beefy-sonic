@@ -160,7 +160,7 @@ contract BeefySonic is
     function requestRedeem(uint256 shares, address controller, address owner) external returns (uint256 requestId) {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         // Ensure the owner is the caller or an authorized operator
-        if (owner != msg.sender && !$.isOperator[owner][msg.sender]) revert NotAuthorized();
+        if (owner != msg.sender || !$.isOperator[owner][msg.sender]) revert NotAuthorized();
 
         // Ensure the minimum withdrawal amount is met
         if (shares < $.minWithdraw) revert MinWithdrawNotMet();
@@ -239,7 +239,7 @@ contract BeefySonic is
 
             if (remaining > validator.delegations) {
                 $.validatorIds.push(validator.id);
-                $.withdrawAmounts.push(remaining - validator.delegations);
+                $.withdrawAmounts.push(validator.delegations);
                 remaining -= validator.delegations;
                 validator.lastUndelegateEpoch = currentEpoch;
             } else {
@@ -253,6 +253,7 @@ contract BeefySonic is
 
         if (remaining > 0) revert WithdrawError();
 
+        // We do this because we dont know the size of our array and cant push to memory so we store them and write to memory then delete
         _validatorIds = $.validatorIds;
         _withdrawAmounts = $.withdrawAmounts;
         delete $.validatorIds;
@@ -273,7 +274,7 @@ contract BeefySonic is
         BeefySonicStorage storage $ = getBeefySonicStorage();
 
         // Ensure the controller is the caller or an authorized operator
-        if(!(_controller == msg.sender && !$.isOperator[_controller][msg.sender])) revert NotAuthorized();
+        if(!(_controller == msg.sender || !$.isOperator[_controller][msg.sender])) revert NotAuthorized();
        
         RedemptionRequest storage request = $.pendingRedemptions[_controller][_requestId];
         
@@ -308,7 +309,7 @@ contract BeefySonic is
         BeefySonicStorage storage $ = getBeefySonicStorage();
 
         // Ensure the controller is the caller or an authorized operator
-        if(!(_controller == msg.sender && !$.isOperator[_controller][msg.sender])) revert NotAuthorized();
+        if(!(_controller == msg.sender || !$.isOperator[_controller][msg.sender])) revert NotAuthorized();
 
         RedemptionRequest storage request = $.pendingRedemptions[_controller][_requestId];
 

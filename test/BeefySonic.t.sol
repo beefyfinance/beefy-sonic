@@ -5,6 +5,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {BeefySonic} from "../contracts/BeefySonic.sol";
 import {IBeefySonic} from "../contracts/interfaces/IBeefySonic.sol";
 import {ISFC} from "../contracts/interfaces/ISFC.sol";
+import {IConstantsManager} from "../contracts/interfaces/IConstantsManager.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -26,7 +27,7 @@ contract BeefySonicTest is Test {
     string public name = "Beefy Sonic";
     string public symbol = "beS";
     uint256 public beefyValidatorId = 31;
-    
+
     function setUp() public {
         vm.createSelectFork({urlOrAlias: "sonic", blockNumber: 13732080});
         implementation = new BeefySonic();
@@ -56,6 +57,65 @@ contract BeefySonicTest is Test {
         assertEq(validator.active, true);
     }
 
+    function nextEpoch() internal {
+        uint256 currentSealedEpoch = ISFC(stakingContract).currentSealedEpoch();
+        uint256 epochLength;
+
+        {
+            (uint256 startTime, uint256 startBlock,,,,) = ISFC(stakingContract).getEpochSnapshot(currentSealedEpoch - 1);
+            (uint256 endTime, uint256 endBlock,,,,) = ISFC(stakingContract).getEpochSnapshot(currentSealedEpoch);
+            epochLength = endTime - startTime;
+            uint256 epochBlocks = endBlock - startBlock;
+            vm.warp(endTime + epochLength);
+            vm.roll(endBlock + epochBlocks);
+        }
+
+
+        uint256[] memory validatorIds = ISFC(stakingContract).getEpochValidatorIDs(currentSealedEpoch);
+        uint256[] memory offlineTime = new uint256[](validatorIds.length);
+        uint256[] memory offlineBlocks = new uint256[](validatorIds.length);
+        uint256[] memory uptimes = new uint256[](validatorIds.length);
+        uint256[] memory originatedTxsFee = new uint256[](validatorIds.length);
+        for(uint256 i = 0; i < validatorIds.length; ++i) {
+            uptimes[i] = epochLength;
+            originatedTxsFee[i] = 1;
+        }
+
+        // sealX() is called by 0x0 via NodeDriver 0xd100A01E...
+        vm.prank(address(0));
+        ISFC(0xd100A01E00000000000000000000000000000000).sealEpoch(offlineTime, offlineBlocks, uptimes, originatedTxsFee);
+        assertEq(ISFC(stakingContract).currentSealedEpoch(), currentSealedEpoch + 1);
+    }
+
+    function test_redeemTwiceSameEpoch() public {
+        address _user = address(1);
+        uint256 _startingBalance = 100e18;
+        vm.deal(_user, _startingBalance);
+
+        // deposit and request 2 undelegates in same tx/epoch
+        vm.startPrank(_user);
+        ISFC(stakingContract).delegate{value: 100e18}(beefyValidatorId);
+        ISFC(stakingContract).undelegate(beefyValidatorId, 1, 50e18);
+        ISFC(stakingContract).undelegate(beefyValidatorId, 2, 50e18);
+        vm.stopPrank();
+
+        // ensure enough epochs have passed
+        uint256 withdrawEpochs = IConstantsManager(ISFC(stakingContract).constsAddress()).withdrawalPeriodEpochs();
+        for (uint256 i = 0; i < withdrawEpochs; ++i) {
+            nextEpoch();
+        }
+        // ensure enough time has passed
+        vm.warp(block.timestamp + IConstantsManager(ISFC(stakingContract).constsAddress()).withdrawalPeriodTime());
+
+        // perform 2 withdrawals in same tx/epoch
+        vm.startPrank(_user);
+        ISFC(stakingContract).withdraw(beefyValidatorId, 1);
+        ISFC(stakingContract).withdraw(beefyValidatorId, 2);
+        vm.stopPrank();
+
+        assertEq(_user.balance, _startingBalance);
+    }
+
     function test_DepositHarvestWithdraw() public {
         address alice = _deposit(1000e18, "alice");
 
@@ -64,7 +124,7 @@ contract BeefySonicTest is Test {
         assertEq(beefySonic.totalAssets(), 1000e18);
 
         _harvest();
-        
+
         uint256 totalAssets = beefySonic.totalAssets();
         assertEq(totalAssets, 1000e18);
 
@@ -92,7 +152,7 @@ contract BeefySonicTest is Test {
 
         // Wait for the lock duration
         vm.warp(block.timestamp + 1 days + 1);
-        
+
         uint256 totalAssets = beefySonic.totalAssets();
         assertGt(totalAssets, 6000e18);
 
@@ -138,7 +198,7 @@ contract BeefySonicTest is Test {
             ISFC(stakingContract).sealEpoch(empty, empty, uptimes, txsFees);
             ISFC(stakingContract).sealEpochValidators(validators);
             vm.stopPrank();
-        }   
+        }
     }
 
     function _withdraw(uint256 sharesAmount, address user) internal {
@@ -173,11 +233,11 @@ contract BeefySonicTest is Test {
         vm.stopPrank();
     }
 
-    function _redeem(uint256 sharesAmount, address user) internal { 
+    function _redeem(uint256 sharesAmount, address user) internal {
         vm.startPrank(user);
 
         uint256 assetAmount = beefySonic.convertToAssets(sharesAmount);
-       
+
         _advanceEpoch(1);
 
         vm.startPrank(user);
@@ -206,5 +266,5 @@ contract BeefySonicTest is Test {
         bytes memory _empty = "";
         return address(new ERC1967Proxy(address(_implementation), _empty));
     }
-  
+
 }

@@ -11,6 +11,10 @@ interface ISFC {
 
     function currentEpoch() external view returns (uint256);
 
+    function currentSealedEpoch() external view returns (uint256);
+
+    function getEpochSnapshot(uint256) external view returns (uint256 endTime, uint256 endBlock, uint256 epochFee, uint256 baseRewardPerSecond, uint256 totalStake, uint256 totalSupply);
+
     function getStake(address, uint256) external view returns (uint256);
 
     function getValidator(uint256) external view returns (uint256 status, uint256 receivedStake, address auth, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedTime, uint256 deactivatedEpoch);

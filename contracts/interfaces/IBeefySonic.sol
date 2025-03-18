@@ -37,8 +37,8 @@ interface IBeefySonic {
         mapping(address => mapping(uint256 => RedemptionRequest)) pendingRedemptions;
         // Pending requests for each owner
         mapping(address => uint256[]) pendingRequests;
-        // Total queued withdrawals
-        uint256 totalPendingRedeemAssets;
+        // Open requests for each validator
+        mapping(uint256 => uint256[]) validatorOpenRequests;
         // Validator tracking
         Validator[] validators;
    }
@@ -54,7 +54,9 @@ interface IBeefySonic {
    struct Validator {
         uint256 id;
         uint256 delegations;
-        uint256 openRequests;
+        uint256 slashedWId;
+        uint256 recoverableAmount;
+        uint256 slashedDelegations;
         bool active;
         bool slashed;
         bool claim;
@@ -85,6 +87,7 @@ interface IBeefySonic {
    event ValidatorAdded(uint256 validatorId, uint256 validatorIndex);
    event ValidatorBalanceUpdated(uint256 indexed validatorIndex, uint256 oldBalance, uint256 newBalance);
    event ValidatorStatusChanged(uint256 indexed validatorIndex, bool active);
+   event ValidatorSlashed(uint256 indexed validatorId, uint256 recoverableAmount, uint256 delegations);
    event BeefyFeeConfigSet(address indexed oldBeefyFeeConfig, address indexed newBeefyFeeConfig);
    event BeefyFeeRecipientSet(address indexed oldBeefyFeeRecipient, address indexed newBeefyFeeRecipient);
    event LiquidityFeeRecipientSet(address indexed oldLiquidityFeeRecipient, address indexed newLiquidityFeeRecipient);

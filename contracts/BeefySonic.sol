@@ -502,26 +502,6 @@ contract BeefySonic is
         }
     }
 
-    /// @notice Preview withdraw always reverts for async flows
-    function previewWithdraw(uint256) public pure virtual override returns (uint256) {
-        revert ERC7540AsyncFlow();
-    }
-
-    /// @notice Preview redeem always reverts for async flows
-    function previewRedeem(uint256) public pure virtual override returns (uint256) {
-        revert ERC7540AsyncFlow();
-    }
-
-    /** @dev See {IERC4626-maxDeposit}. */
-    function maxDeposit(address) public view virtual override returns (uint256) {
-        return _findLargestValidatorToDeposit();
-    }
-
-    /** @dev See {IERC4626-maxMint}. */
-    function maxMint(address) public view virtual override returns (uint256) {
-        return convertToShares(_findLargestValidatorToDeposit());
-    }
-
     /// @dev Find the largest validator to deposit
     /// @return largestCapacity of the validator capacity
     function _findLargestValidatorToDeposit() private view returns (uint256 largestCapacity) {
@@ -545,30 +525,6 @@ contract BeefySonic is
                 largestCapacity = capacity;
             }
         }
-    }
-
-
-    /// @notice Get the rate used by balancer
-    /// @return rate Rate
-    function getRate() public view returns (uint256) {
-        return convertToAssets(1e18);
-    }
-
-    /// @notice Get the price per full share
-    /// @return pricePerFullShare Price per full share
-    function getPricePerFullShare() external view returns (uint256) {
-        return convertToAssets(1e18);
-    }
-
-    /// @notice Override the decimals function to match underlying decimals
-    /// @return _decimals Decimals of the underlying token
-    function decimals() public view override(ERC20Upgradeable, ERC4626Upgradeable) returns (uint8 _decimals) {
-        return ERC4626Upgradeable.decimals();
-    }
-
-    /// @notice Get the liquidity fee recipient
-    function liquidityFeeRecipient() public view returns (address) {
-        return getBeefySonicStorage().liquidityFeeRecipient;
     }
    
     /// @notice Notify the yield to start vesting
@@ -665,6 +621,36 @@ contract BeefySonic is
         locked = $.totalLocked * remaining / $.lockDuration;
     }
 
+    /// @notice Get the number of validators
+    /// @return _length Number of validators
+    function validatorsLength() external view returns (uint256) {
+        return getBeefySonicStorage().validators.length;
+    }
+
+
+    /// @notice Get the rate used by balancer
+    /// @return rate Rate
+    function getRate() public view returns (uint256) {
+        return convertToAssets(1e18);
+    }
+
+    /// @notice Get the price per full share
+    /// @return pricePerFullShare Price per full share
+    function getPricePerFullShare() external view returns (uint256) {
+        return convertToAssets(1e18);
+    }
+
+    /// @notice Override the decimals function to match underlying decimals
+    /// @return _decimals Decimals of the underlying token
+    function decimals() public view override(ERC20Upgradeable, ERC4626Upgradeable) returns (uint8 _decimals) {
+        return ERC4626Upgradeable.decimals();
+    }
+
+    /// @notice Get the liquidity fee recipient
+    function liquidityFeeRecipient() public view returns (address) {
+        return getBeefySonicStorage().liquidityFeeRecipient;
+    }
+
     /// @notice Total assets on this contract
     /// @return total Total amount of assets
     function totalAssets() public view override returns (uint256 total) {
@@ -672,20 +658,80 @@ contract BeefySonic is
     }
     
     /// @notice Get the minimum harvest amount
+    /// @return minHarvest Minimum harvest amount
     function minHarvest() public view returns (uint256) {
         return getBeefySonicStorage().minHarvest;
     }
 
     /// @notice Get the lock duration
+    /// @return lockDuration Lock duration
     function lockDuration() public view returns (uint256) {
         return getBeefySonicStorage().lockDuration;
     }
 
     /// @notice Get the liquidity fee
+    /// @return liquidityFee Liquidity fee
     function liquidityFee() public view returns (uint256) {
         return getBeefySonicStorage().liquidityFee;
     }
- 
+
+    /// @notice Get a validator
+    /// @param _validatorIndex Index of the validator
+    /// @return validator Validator struct
+    function validatorByIndex(uint256 _validatorIndex) external view returns (Validator memory) {
+        return getBeefySonicStorage().validators[_validatorIndex];
+    }
+
+        /// @notice Preview withdraw always reverts for async flows
+    function previewWithdraw(uint256) public pure virtual override returns (uint256) {
+        revert ERC7540AsyncFlow();
+    }
+
+    /// @notice Preview redeem always reverts for async flows
+    function previewRedeem(uint256) public pure virtual override returns (uint256) {
+        revert ERC7540AsyncFlow();
+    }
+
+    /** @dev See {IERC4626-maxDeposit}. */
+    function maxDeposit(address) public view virtual override returns (uint256) {
+        return _findLargestValidatorToDeposit();
+    }
+
+    /** @dev See {IERC4626-maxMint}. */
+    function maxMint(address) public view virtual override returns (uint256) {
+        return convertToShares(_findLargestValidatorToDeposit());
+    }
+
+    /// @notice Get the want token
+    /// @return want Address of the want token
+    function want() external view returns (address) {
+        return getBeefySonicStorage().want;
+    }
+
+    /// @notice Get the Beefy fee recipient
+    /// @return beefyFeeRecipient Address of the Beefy fee recipient
+    function beefyFeeRecipient() external view returns (address) {
+        return getBeefySonicStorage().beefyFeeRecipient;
+    }
+
+    /// @notice Get the Beefy fee configuration
+    /// @return beefyFeeConfig Address of the Beefy fee configuration
+    function beefyFeeConfig() external view returns (address) {
+        return getBeefySonicStorage().beefyFeeConfig;
+    }
+
+    /// @notice Get the keeper
+    /// @return keeper Address of the keeper
+    function keeper() external view returns (address) {
+        return getBeefySonicStorage().keeper;
+    }
+
+    /// @notice Get the withdraw duration
+    /// @return withdrawDuration Withdraw duration
+    function withdrawDuration() public view returns (uint256) {
+        return IConstantsManager(ISFC(getBeefySonicStorage().stakingContract).constsAddress()).withdrawalPeriodTime();
+    }
+
     /// @notice Add a new validator
     /// @param _validatorId ID of the validator
     function addValidator(uint256 _validatorId) external onlyOwner {
@@ -712,47 +758,6 @@ contract BeefySonic is
         $.validators.push(validator);
         
         emit ValidatorAdded(_validatorId, validatorIndex);
-    }
-
-    /// @notice Get the number of validators
-    /// @return _length Number of validators
-    function validatorsLength() external view returns (uint256) {
-        return getBeefySonicStorage().validators.length;
-    }
-
-    /// @notice Get a validator
-    /// @param _validatorIndex Index of the validator
-    /// @return validator Validator struct
-    function validatorByIndex(uint256 _validatorIndex) external view returns (Validator memory) {
-        return getBeefySonicStorage().validators[_validatorIndex];
-    }
-
-    /// @notice Get the want token
-    /// @return want Address of the want token
-    function want() external view returns (address) {
-        return getBeefySonicStorage().want;
-    }
-
-    /// @notice Get the Beefy fee recipient
-    /// @return beefyFeeRecipient Address of the Beefy fee recipient
-    function beefyFeeRecipient() external view returns (address) {
-        return getBeefySonicStorage().beefyFeeRecipient;
-    }
-
-    /// @notice Get the Beefy fee configuration
-    /// @return beefyFeeConfig Address of the Beefy fee configuration
-    function beefyFeeConfig() external view returns (address) {
-        return getBeefySonicStorage().beefyFeeConfig;
-    }
-
-    function keeper() external view returns (address) {
-        return getBeefySonicStorage().keeper;
-    }
-
-    /// @notice Get the withdraw duration
-    /// @return withdrawDuration Withdraw duration
-    function withdrawDuration() public view returns (uint256) {
-        return IConstantsManager(ISFC(getBeefySonicStorage().stakingContract).constsAddress()).withdrawalPeriodTime();
     }
 
     /// @notice Set a validator's active status

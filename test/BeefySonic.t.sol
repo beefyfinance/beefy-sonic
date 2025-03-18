@@ -196,6 +196,38 @@ contract BeefySonicTest is Test {
         assertGt(IERC20(want).balanceOf(charlie), 1000e18);
     }
 
+    function test_Setters() public {
+        vm.startPrank(beefySonic.owner());
+
+        beefySonic.setLiquidityFeeRecipient(address(0x1234567890123456789012345678901234567890));
+        assertEq(beefySonic.liquidityFeeRecipient(), address(0x1234567890123456789012345678901234567890));
+
+        vm.expectRevert(IBeefySonic.InvalidLiquidityFee.selector);
+        beefySonic.setLiquidityFee(0.11e18);
+
+        beefySonic.setLiquidityFee(0.05e18);
+        assertEq(beefySonic.liquidityFee(), 0.05e18);
+
+        beefySonic.setBeefyFeeConfig(address(0x1234567890123456789012345678901234567890));
+        assertEq(beefySonic.beefyFeeConfig(), address(0x1234567890123456789012345678901234567890));
+
+        beefySonic.setBeefyFeeRecipient(address(0x1234567890123456789012345678901234567890));
+        assertEq(beefySonic.beefyFeeRecipient(), address(0x1234567890123456789012345678901234567890));
+
+        beefySonic.setKeeper(address(0x1234567890123456789012345678901234567890));
+        assertEq(beefySonic.keeper(), address(0x1234567890123456789012345678901234567890));
+
+        beefySonic.setLockDuration(2 days);
+        assertEq(beefySonic.lockDuration(), 2 days);
+
+        beefySonic.setMinHarvest(10e18);
+        assertEq(beefySonic.minHarvest(), 10e18);
+
+        beefySonic.setKeeper(address(0x1234567890123456789012345678901234567890));
+        assertEq(beefySonic.keeper(), address(0x1234567890123456789012345678901234567890));
+
+        vm.stopPrank();
+    }
 
     function _deposit(uint256 amount, string memory _name) internal returns (address user) {
         user = makeAddr(_name);

@@ -565,6 +565,11 @@ contract BeefySonic is
     function decimals() public view override(ERC20Upgradeable, ERC4626Upgradeable) returns (uint8 _decimals) {
         return ERC4626Upgradeable.decimals();
     }
+
+    /// @notice Get the liquidity fee recipient
+    function liquidityFeeRecipient() public view returns (address) {
+        return getBeefySonicStorage().liquidityFeeRecipient;
+    }
    
     /// @notice Notify the yield to start vesting
     function harvest() external whenNotPaused {
@@ -726,6 +731,22 @@ contract BeefySonic is
     /// @return want Address of the want token
     function want() external view returns (address) {
         return getBeefySonicStorage().want;
+    }
+
+    /// @notice Get the Beefy fee recipient
+    /// @return beefyFeeRecipient Address of the Beefy fee recipient
+    function beefyFeeRecipient() external view returns (address) {
+        return getBeefySonicStorage().beefyFeeRecipient;
+    }
+
+    /// @notice Get the Beefy fee configuration
+    /// @return beefyFeeConfig Address of the Beefy fee configuration
+    function beefyFeeConfig() external view returns (address) {
+        return getBeefySonicStorage().beefyFeeConfig;
+    }
+
+    function keeper() external view returns (address) {
+        return getBeefySonicStorage().keeper;
     }
 
     /// @notice Get the withdraw duration

@@ -581,14 +581,14 @@ contract BeefySonic is
     /// @param _amount Amount of assets to charge
     function _chargeFees(uint256 _amount) internal {
         BeefySonicStorage storage $ = getBeefySonicStorage();
-        uint256 beefyFee = _amount * IFeeConfig($.beefyFeeConfig).getFees(address(this)).total / 1e18;
-        uint256 liquidityFee = _amount * $.liquidityFee / 1e18;
+        uint256 beefyFeeAmount = _amount * IFeeConfig($.beefyFeeConfig).getFees(address(this)).total / 1e18;
+        uint256 liquidityFeeAmount = _amount * $.liquidityFee / 1e18;
 
-        IWrappedNative($.want).deposit{value: liquidityFee + beefyFee}();
-        IERC20($.want).safeTransfer($.beefyFeeRecipient, beefyFee);
-        IERC20($.want).safeTransfer($.liquidityFeeRecipient, liquidityFee);
+        IWrappedNative($.want).deposit{value: liquidityFeeAmount + beefyFeeAmount}();
+        IERC20($.want).safeTransfer($.beefyFeeRecipient, beefyFeeAmount);
+        IERC20($.want).safeTransfer($.liquidityFeeRecipient, liquidityFeeAmount);
 
-        emit ChargedFees(_amount, beefyFee, liquidityFee);
+        emit ChargedFees(_amount, beefyFeeAmount, liquidityFeeAmount);
     }
 
     /// @notice Get validator index by validator ID

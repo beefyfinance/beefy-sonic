@@ -139,17 +139,17 @@ contract BeefySonicTest is Test {
         
         // 6. Use emergency withdrawal instead
         vm.startPrank(alice);
-    //    uint256 assetsWithdrawn = beefySonic.processWithdrawWithEmergency(requestId, alice, alice);
+        uint256 assetsWithdrawn = beefySonic.emergencyWithdraw(requestId, alice, alice);
         vm.stopPrank();
         
         // 7. Verify that the user received the slashed amount (70% of original)
-      //  uint256 expectedAssets = beefySonic.convertToAssets(500e18) * slashingRefundRatio / 1e18;
-      //  assertApproxEqRel(assetsWithdrawn, expectedAssets, 0.01e18); // Allow 1% deviation
+        uint256 expectedAssets = beefySonic.convertToAssets(500e18) * slashingRefundRatio / 1e18;
+        assertApproxEqRel(assetsWithdrawn, expectedAssets, 0.01e18); // Allow 1% deviation
         
         // 8. Verify that the validator is now marked as slashed and inactive
         IBeefySonic.Validator memory validator = beefySonic.validatorByIndex(0);
-      //  assertTrue(validator.slashed);
-      //  assertFalse(validator.active);
+        assertTrue(validator.slashed);
+        assertFalse(validator.active);
     }
 
     function test_MultipleValidators() public {

@@ -308,12 +308,28 @@ contract BeefySonic is
         return _processWithdraw(request, _requestId, _receiver, _controller, false);
     }
 
+    /// @notice Emergency withdraw assets from the vault
+    /// @param _requestId Request ID of the withdrawal
+    /// @param _receiver Address to receive the assets
+    /// @param _controller Controller address
+    /// @return assets Amount of assets redeemed
+    function emergencyWithdraw(uint256 _requestId, address _receiver, address _controller) external returns (uint256 assets) {
+        BeefySonicStorage storage $ = getBeefySonicStorage();
+
+        // Ensure the controller is the caller or an authorized operator
+        _onlyOperatorOrController(_controller);
+
+        RedemptionRequest storage request = $.pendingRedemptions[_controller][_requestId];
+
+        return _processWithdraw(request, _requestId, _receiver, _controller, true);
+    }
+
     /// @notice Check for slashed validators and undelegate
     /// @dev This function is used to undelegate assets from slashed validators
     function checkForSlashedValidatorsAndUndelegate(uint256 validatorIndex) external onlyOwner {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         Validator storage validator = $.validators[validatorIndex];
-        
+
         if (!_isValidatorOk(validator.id)) {
             // Check if the validator is slashed
             bool isSlashed = ISFC($.stakingContract).isSlashed(validator.id);

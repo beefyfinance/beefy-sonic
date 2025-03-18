@@ -664,6 +664,7 @@ contract BeefySonic is
             id: _validatorId,
             delegations: 0,
             lastUndelegateEpoch: 0,
+            openRequests: 0,
             active: true,
             slashed: false,
             claim: true

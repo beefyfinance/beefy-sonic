@@ -767,7 +767,7 @@ contract BeefySonic is
     /// @notice Set an operator to finalize the claim of the request to withdraw
     /// @param _operator Address of the operator
     /// @param _approved Whether the operator is approved
-    function setOperator(address _operator, bool _approved) external onlyOwner returns (bool) {
+    function setOperator(address _operator, bool _approved) external returns (bool) {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         $.isOperator[msg.sender][_operator] = _approved;
         emit OperatorSet(msg.sender, _operator, _approved);

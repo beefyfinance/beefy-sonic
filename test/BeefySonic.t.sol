@@ -55,7 +55,7 @@ contract BeefySonicTest is Test {
         assertEq(validator.delegations, 0);
         assertEq(validator.active, true);
     }
-/*
+
     function test_DepositHarvestWithdraw() public {
         uint256 depositAmount = 1000e18;
 
@@ -151,7 +151,7 @@ contract BeefySonicTest is Test {
         assertTrue(validator.slashed);
         assertFalse(validator.active);
     }
-*/
+
     function test_MultipleValidators() public {
         vm.startPrank(beefySonic.owner());
         beefySonic.addValidator(14);
@@ -273,17 +273,23 @@ contract BeefySonicTest is Test {
         beefySonic.requestRedeem(sharesAmount, user, user);
         vm.stopPrank();
 
+        address zap = makeAddr("zap");
+
         vm.startPrank(user);
+        beefySonic.setOperator(zap, true);
+        vm.stopPrank();
+
+        vm.startPrank(zap);
 
         uint256 before = IERC20(want).balanceOf(user);
 
         uint256 assetAmount = beefySonic.convertToAssets(sharesAmount - 1e18);
         uint256 secondAssetAmount = beefySonic.convertToAssets(1e18);
-        uint256 requestId = beefySonic.requestRedeem(sharesAmount - 1e18, user, user);
-        uint256 secondRequestId = beefySonic.requestRedeem(1e18, user, user);
+        uint256 requestId = beefySonic.requestRedeem(sharesAmount - 1e18, zap, user);
+        uint256 secondRequestId = beefySonic.requestRedeem(1e18, zap, user);
 
         vm.expectRevert(IBeefySonic.NotClaimableYet.selector);
-        beefySonic.withdraw(requestId, user, user);
+        beefySonic.withdraw(requestId, zap, user);
 
         // Wait for the withdrawal
         vm.warp(block.timestamp + 14 days + 1);

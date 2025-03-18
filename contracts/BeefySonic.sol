@@ -137,7 +137,8 @@ contract BeefySonic is
             // Check if the validator is ok
             bool isOk = _isValidatorOk(validator.id);
             if (!isOk) {
-                $.validators[i].active = false;
+                _setValidatorActive(i, false);
+
                 continue;
             }
 
@@ -390,7 +391,7 @@ contract BeefySonic is
             if (isSlashed) {
                 // update validator to not active find index
                 uint256 index = _getValidatorIndex(validatorId);
-                $.validators[index].active = false;
+                _setValidatorActive(index, false);
                 // If the validator is slashed, we need to make sure we get the refund if more than 0
                 uint256 refundAmount = ISFC($.stakingContract).slashingRefundRatio(validatorId);
                 if (refundAmount > 0) {
@@ -646,6 +647,13 @@ contract BeefySonic is
     /// @param _validatorIndex Index of the validator
     /// @param _active Whether the validator is active
     function setValidatorActive(uint256 _validatorIndex, bool _active) external onlyOwner {
+        _setValidatorActive(_validatorIndex, _active);
+    }
+
+    /// @notice Set a validator's active status
+    /// @param _validatorIndex Index of the validator
+    /// @param _active Whether the validator is active
+    function _setValidatorActive(uint256 _validatorIndex, bool _active) private {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         
         if (_validatorIndex >= $.validators.length) revert InvalidValidatorIndex();

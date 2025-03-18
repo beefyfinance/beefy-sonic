@@ -226,7 +226,7 @@ contract BeefySonic is
     /// @param _assets Amount of assets to withdraw
     /// @return _validatorIds Array of validator IDs
     /// @return _withdrawAmounts Array of withdraw amounts
-    function _getValidatorsToWithdraw(uint256 _assets) private view returns (uint256[] memory _validatorIds, uint256[] memory _withdrawAmounts) {
+    function _getValidatorsToWithdraw(uint256 _assets) private returns (uint256[] memory _validatorIds, uint256[] memory _withdrawAmounts) {
         BeefySonicStorage storage $ = getBeefySonicStorage();
 
         uint256 remaining = _assets;
@@ -239,6 +239,11 @@ contract BeefySonic is
             Validator storage validator = $.validators[i-1];
 
             if (validator.delegations == 0) continue;
+            bool isOk = _isValidatorOk(validator.id);
+            if (!isOk) {
+                _setValidatorActive(i, false);
+                continue;
+            }
 
             if (remaining > validator.delegations) {
                 validatorIds[currentIndex] = validator.id;

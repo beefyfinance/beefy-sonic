@@ -617,7 +617,27 @@ contract BeefySonic is
     function totalAssets() public view override returns (uint256 total) {
         total = getBeefySonicStorage().storedTotal - lockedProfit();
     }
+    
+    /// @notice Get the minimum withdrawal amount
+    function minWithdraw() public view returns (uint256) {
+        return getBeefySonicStorage().minWithdraw;
+    }
 
+    /// @notice Get the minimum harvest amount
+    function minHarvest() public view returns (uint256) {
+        return getBeefySonicStorage().minHarvest;
+    }
+
+    /// @notice Get the lock duration
+    function lockDuration() public view returns (uint256) {
+        return getBeefySonicStorage().lockDuration;
+    }
+
+    /// @notice Get the liquidity fee
+    function liquidityFee() public view returns (uint256) {
+        return getBeefySonicStorage().liquidityFee;
+    }
+ 
     /// @notice Add a new validator
     /// @param _validatorId ID of the validator
     function addValidator(uint256 _validatorId) external onlyOwner {

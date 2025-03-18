@@ -31,8 +31,6 @@ interface IBeefySonic {
         uint256 wId;
         // Minimum harvest amount
         uint256 minHarvest;
-        // Minimum withdraw amount
-        uint256 minWithdraw;
         // Operator tracking
         mapping(address => mapping(address => bool)) isOperator;
         // Redemption requests
@@ -60,7 +58,6 @@ interface IBeefySonic {
    struct Validator {
         uint256 id;
         uint256 delegations;
-        uint256 lastUndelegateEpoch;
         uint256 openRequests;
         bool active;
         bool slashed;
@@ -81,7 +78,6 @@ interface IBeefySonic {
    error NotReadyForHarvest();
    error NotEnoughRewards();
    error ValidatorNotFound();
-   error MinWithdrawNotMet();
    error WithdrawError();
    error NoOK();
 

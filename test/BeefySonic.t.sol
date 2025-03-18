@@ -149,11 +149,10 @@ contract BeefySonicTest is Test {
 
         vm.startPrank(user);
 
-        uint256 assetAmount = beefySonic.convertToAssets(sharesAmount);
-        uint256 requestId = beefySonic.requestRedeem(sharesAmount, user, user);
-
-        vm.expectRevert(IBeefySonic.MinWithdrawNotMet.selector);
-        beefySonic.requestRedeem(1e17, user, user);
+        uint256 assetAmount = beefySonic.convertToAssets(sharesAmount - 1e18);
+        uint256 secondAssetAmount = beefySonic.convertToAssets(1e18);
+        uint256 requestId = beefySonic.requestRedeem(sharesAmount - 1e18, user, user);
+        uint256 secondRequestId = beefySonic.requestRedeem(1e18, user, user);
 
         vm.expectRevert(IBeefySonic.NotClaimableYet.selector);
         beefySonic.withdraw(requestId, user, user);
@@ -167,9 +166,11 @@ contract BeefySonicTest is Test {
         vm.startPrank(user);
 
         uint256 shares = beefySonic.withdraw(requestId, user, user);
-        assertEq(shares, sharesAmount);
+        assertEq(shares, sharesAmount - 1e18);
+        uint256 secondShares = beefySonic.withdraw(secondRequestId, user, user);
+        assertEq(secondShares, 1e18);
 
-        assertEq(IERC20(want).balanceOf(user), assetAmount);
+        assertEq(IERC20(want).balanceOf(user), assetAmount + secondAssetAmount);
         vm.stopPrank();
     }
 

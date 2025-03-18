@@ -79,7 +79,6 @@ contract BeefySonic is
         $.liquidityFee = _liquidityFee;
         $.lockDuration = 1 days;
         $.minHarvest = 1e6;
-        $.minWithdraw = 1e18;
         $.requestId++;
     }
 
@@ -170,9 +169,6 @@ contract BeefySonic is
         // Ensure the owner is the caller or an authorized operator
         _onlyOperatorOrController(_controller);
 
-        // Ensure the minimum withdrawal amount is met
-        if (_shares < $.minWithdraw) revert MinWithdrawNotMet();
-
         // Convert shares to assets
         uint256 assets = convertToAssets(_shares);
 
@@ -237,25 +233,18 @@ contract BeefySonic is
 
         uint256 remaining = _assets;
 
-        uint256 currentEpoch = ISFC($.stakingContract).currentEpoch();
-
         // loop backwards in the validators array withdraw from newest validator first
         for (uint256 i = $.validators.length; i > 0; i--) {
             Validator storage validator = $.validators[i-1];
-
-            // 2 withdrawals in same epoch will revert this skips a validator with a withdraw in same epoch
-            if (validator.lastUndelegateEpoch == currentEpoch) continue;
 
             if (remaining > validator.delegations) {
                 $.validatorIds.push(validator.id);
                 $.withdrawAmounts.push(validator.delegations);
                 remaining -= validator.delegations;
-                validator.lastUndelegateEpoch = currentEpoch;
             } else {
                 $.validatorIds.push(validator.id);
                 $.withdrawAmounts.push(remaining);
                 remaining = 0;
-                validator.lastUndelegateEpoch = currentEpoch;
                 break;
             }
         }
@@ -629,11 +618,6 @@ contract BeefySonic is
         total = getBeefySonicStorage().storedTotal - lockedProfit();
     }
     
-    /// @notice Get the minimum withdrawal amount
-    function minWithdraw() public view returns (uint256) {
-        return getBeefySonicStorage().minWithdraw;
-    }
-
     /// @notice Get the minimum harvest amount
     function minHarvest() public view returns (uint256) {
         return getBeefySonicStorage().minHarvest;
@@ -664,7 +648,6 @@ contract BeefySonic is
         Validator memory validator = Validator({
             id: _validatorId,
             delegations: 0,
-            lastUndelegateEpoch: 0,
             openRequests: 0,
             active: true,
             slashed: false,
@@ -790,14 +773,6 @@ contract BeefySonic is
         BeefySonicStorage storage $ = getBeefySonicStorage();
         $.lockDuration = _lockDuration;
         emit LockDurationSet($.lockDuration, _lockDuration);
-    }
-
-    /// @notice Set the minimum withdrawal amount
-    /// @param _minWithdraw Minimum withdrawal amount
-    function setMinWithdraw(uint256 _minWithdraw) external onlyOwner {
-        BeefySonicStorage storage $ = getBeefySonicStorage();
-        $.minWithdraw = _minWithdraw;
-        emit MinWithdrawSet($.minWithdraw, _minWithdraw);
     }
 
     function setMinHarvest(uint256 _minHarvest) external onlyOwner {

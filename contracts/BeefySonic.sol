@@ -243,6 +243,8 @@ contract BeefySonic is
         for (uint256 i = $.validators.length; i > 0; i--) {
             Validator storage validator = $.validators[i-1];
 
+            if (validator.delegations == 0) continue;
+
             if (remaining > validator.delegations) {
                 validatorIds[currentIndex] = validator.id;
                 withdrawAmounts[currentIndex] = validator.delegations;

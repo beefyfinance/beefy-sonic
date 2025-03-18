@@ -176,11 +176,24 @@ contract BeefySonicTest is Test {
 
         vm.warp(block.timestamp + 1 days + 1);
 
+        uint256 ppfs = beefySonic.getPricePerFullShare();
+        console.log("ppfs", ppfs);
+        uint256 rate = beefySonic.getRate();
+        console.log("rate", rate);
+
         uint256 totalAssets = beefySonic.totalAssets();
         console.log("totalAssets", totalAssets);
 
         // try to withdraw via 2 validators
         _withdraw(3000e18, alice);
+        _withdraw(beefySonic.balanceOf(alice), alice);
+        _withdraw(beefySonic.balanceOf(bob), bob);
+        _withdraw(beefySonic.balanceOf(charlie), charlie);
+
+        /// Should have earned rewards
+        assertGt(IERC20(want).balanceOf(alice), maxDeposit);
+        assertGt(IERC20(want).balanceOf(bob), 1000e18);
+        assertGt(IERC20(want).balanceOf(charlie), 1000e18);
     }
 
 
@@ -262,6 +275,8 @@ contract BeefySonicTest is Test {
 
         vm.startPrank(user);
 
+        uint256 before = IERC20(want).balanceOf(user);
+
         uint256 assetAmount = beefySonic.convertToAssets(sharesAmount - 1e18);
         uint256 secondAssetAmount = beefySonic.convertToAssets(1e18);
         uint256 requestId = beefySonic.requestRedeem(sharesAmount - 1e18, user, user);
@@ -283,7 +298,7 @@ contract BeefySonicTest is Test {
         uint256 secondShares = beefySonic.withdraw(secondRequestId, user, user);
         assertEq(secondShares, 1e18);
 
-        assertEq(IERC20(want).balanceOf(user), assetAmount + secondAssetAmount);
+        assertEq(IERC20(want).balanceOf(user) - before, assetAmount + secondAssetAmount);
         vm.stopPrank();
     }
 

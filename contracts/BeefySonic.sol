@@ -596,7 +596,7 @@ contract BeefySonic is
     /// @return index Index of the validator
     function _getValidatorIndex(uint256 _validatorId) internal view returns (uint256) {
         BeefySonicStorage storage $ = getBeefySonicStorage();
-        for (uint256 i = 0; i < $.validators.length; i++) {
+        for (uint256 i; i < $.validators.length; i++) {
             if ($.validators[i].id == _validatorId) return i;
         }
         revert ValidatorNotFound();

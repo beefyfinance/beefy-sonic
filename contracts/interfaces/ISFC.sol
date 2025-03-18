@@ -40,4 +40,8 @@ interface ISFC {
     function getEpochValidatorIDs(uint256 epoch) external view returns (uint256[] memory);
 
     function stashRewards(address delegator, uint256 toValidatorID) external;
+
+    function updateSlashingRefundRatio(uint256 validatorID, uint256 slashingRefundRatio) external;
+
+    function deactivateValidator(uint256 validatorID, uint256 status) external;
 }

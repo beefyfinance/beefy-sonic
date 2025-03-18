@@ -99,6 +99,57 @@ contract BeefySonicTest is Test {
         _withdraw(1000e18, bob);
     }
 
+    function test_SlashedValidatorWithdraw() public {
+        // 1. First deposit funds with a user
+        address alice = _deposit(1000e18, "alice");
+        
+        // 2. Request a redemption
+        vm.startPrank(alice);
+        uint256 requestId = beefySonic.requestRedeem(500e18, alice, alice);
+        vm.stopPrank();
+        
+        // 3. Wait for the withdrawal period
+        vm.warp(block.timestamp + 14 days + 1);
+
+        _advanceEpoch(4);
+
+        vm.startPrank(address(0xD100ae0000000000000000000000000000000000));
+        // Double sign bit indicating bad behavior 
+        ISFC(stakingContract).deactivateValidator(beefyValidatorId, 128);
+        vm.stopPrank();
+        
+        // 4. Simulate a validator being slashed before withdrawal
+        bool isSlashed = ISFC(stakingContract).isSlashed(beefyValidatorId);
+        assertTrue(isSlashed);
+        
+        // Mock the slashing refund ratio (e.g., 70% of funds can be recovered)
+        uint256 slashingRefundRatio = 0.7e18; // 70% refund
+        address owner = address(0x69Adb6Bd46852315ADbbfA633d2bbf792CdB3e04);
+        vm.startPrank(owner);
+        ISFC(stakingContract).updateSlashingRefundRatio(beefyValidatorId, slashingRefundRatio);
+        vm.stopPrank();
+
+        // 5. Try normal withdrawal - should revert with WithdrawError
+        vm.startPrank(alice);
+        vm.expectRevert(IBeefySonic.WithdrawError.selector);
+        beefySonic.withdraw(requestId, alice, alice);
+        vm.stopPrank();
+        
+        // 6. Use emergency withdrawal instead
+        vm.startPrank(alice);
+        uint256 assetsWithdrawn = beefySonic.processWithdrawWithEmergency(requestId, alice, alice);
+        vm.stopPrank();
+        
+        // 7. Verify that the user received the slashed amount (70% of original)
+        uint256 expectedAssets = beefySonic.convertToAssets(500e18) * slashingRefundRatio / 1e18;
+        assertApproxEqRel(assetsWithdrawn, expectedAssets, 0.01e18); // Allow 1% deviation
+        
+        // 8. Verify that the validator is now marked as slashed and inactive
+        IBeefySonic.Validator memory validator = beefySonic.validatorByIndex(0);
+        assertTrue(validator.slashed);
+        assertFalse(validator.active);
+    }
+
     function _deposit(uint256 amount, string memory _name) internal returns (address user) {
         user = makeAddr(_name);
         vm.startPrank(user);
@@ -132,6 +183,35 @@ contract BeefySonicTest is Test {
             uint256[] memory uptimes = new uint256[](validators.length);
             for (uint j = 0; j < validators.length; j++) {
                 uptimes[j] = 1 days; // Assuming 1 day epoch duration
+            }
+
+            ISFC(stakingContract).sealEpoch(empty, empty, uptimes, txsFees);
+            ISFC(stakingContract).sealEpochValidators(validators);
+            vm.stopPrank();
+        }   
+    }
+
+     function _advanceEpochOffline(uint256 epochs) internal {
+        for (uint256 i = 0; i < epochs; i++) {
+            address node = address(0xD100ae0000000000000000000000000000000000);
+            vm.startPrank(node);
+            uint256 currentEpoch = ISFC(stakingContract).currentEpoch();
+            uint256[] memory validators = ISFC(stakingContract).getEpochValidatorIDs(currentEpoch);
+
+            uint256[] memory empty = new uint256[](validators.length);
+
+            // Generate some transaction fees to create rewards
+            uint256[] memory txsFees = new uint256[](validators.length);
+            for (uint j = 0; j < validators.length; j++) {
+                if (validators[j] == beefyValidatorId) txsFees[j] = 0;
+                else txsFees[j] = 1 ether; // Add some transaction fees for each validator
+            }
+
+            // Seal epoch with transaction fees and 100% uptime
+            uint256[] memory uptimes = new uint256[](validators.length);
+            for (uint j = 0; j < validators.length; j++) {
+                if (validators[j] == beefyValidatorId) uptimes[j] = 0;
+                else uptimes[j] = 1 days; // Assuming 1 day epoch duration
             }
 
             ISFC(stakingContract).sealEpoch(empty, empty, uptimes, txsFees);

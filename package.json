@@ -7,7 +7,8 @@
   "license": "MIT",
   "scripts": {
     "build": "forge build",
-    "test": "forge test"
+    "test": "forge test",
+    "coverage": "forge coverage"
   },
   "devDependencies": {
     "@openzeppelin/contracts": "npm:@openzeppelin/contracts",

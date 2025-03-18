@@ -116,8 +116,6 @@ contract BeefySonic is
 
         // Delegate assets to the validator only if a single validator can handle the deposit amount
         ISFC($.stakingContract).delegate{value: _assets}($.validators[validatorIndex].id);
-
-        emit Deposit(totalAssets(), _assets);
     }
 
     /// @notice Get the validator to deposit to
@@ -487,10 +485,15 @@ contract BeefySonic is
 
     /// @notice Get the pending redeem requests for a user
     /// @param _controller Controller address
-    /// @return pendingRequests Array of pending requests
-    function userPendingRedeemRequests(address _controller) external view returns (uint256[] memory) {
+    /// @return requests Array of pending requests
+    function userPendingRedeemRequests(address _controller) external view returns (RedemptionRequest[] memory requests) {
         BeefySonicStorage storage $ = getBeefySonicStorage();
-        return $.pendingRequests[_controller];
+
+        requests = new RedemptionRequest[]($.pendingRequests[_controller].length);
+
+        for (uint256 i; i < $.pendingRequests[_controller].length; ++i) {
+            requests[i] = $.pendingRedemptions[_controller][$.pendingRequests[_controller][i]];
+        }
     }
 
     /// @notice Preview withdraw always reverts for async flows

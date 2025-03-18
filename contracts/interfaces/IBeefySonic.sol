@@ -85,7 +85,6 @@ interface IBeefySonic {
    error NoOK();
 
    event Notify(address notifier, uint256 amount);
-   event Deposit(uint256 TVL, uint256 amountDeposited);
    event ClaimedRewards(uint256 amount);
    event WithdrawQueued(address indexed owner, address indexed receiver, uint256 shares, uint256 assets, uint256[] validatorIds, uint256[] validatorAmounts);
    event WithdrawProcessed(address indexed owner, address indexed receiver, uint256 shares, uint256 assets);

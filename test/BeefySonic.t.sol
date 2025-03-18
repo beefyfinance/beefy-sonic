@@ -9,7 +9,6 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// NOTES: 
-/// - 2 redeem requests in same epoch fail (about 10 min) can ddos? 
 /// - If a validator is slashed the user who tries to withdraw and gets that validator is punished 
 
 contract BeefySonicTest is Test {

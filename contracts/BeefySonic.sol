@@ -198,6 +198,7 @@ contract BeefySonic is
 
             // Update validator delegations and stored total
             $.validators[i].delegations -= amounts[i];
+            $.validators[i].openRequests++;
             $.storedTotal -= amounts[i];
 
             // Increment wId
@@ -402,9 +403,9 @@ contract BeefySonic is
 
             // Check if the validator is slashed
             bool isSlashed = ISFC($.stakingContract).isSlashed(validatorId);
+            uint256 index = _getValidatorIndex(validatorId);
             if (isSlashed) {
                 // update validator to not active find index
-                uint256 index = _getValidatorIndex(validatorId);
                 _setValidatorActive(index, false);
                 // If the validator is slashed, we need to make sure we get the refund if more than 0
                 uint256 refundAmount = ISFC($.stakingContract).slashingRefundRatio(validatorId);
@@ -415,6 +416,9 @@ contract BeefySonic is
                 // If the validator is not slashed, we can withdraw the assets
                 ISFC($.stakingContract).withdraw(validatorId, requestId);
             }
+
+            // Update validator open requests
+            $.validators[index].openRequests--;
         }
 
         // Calculate the amount withdrawn

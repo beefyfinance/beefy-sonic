@@ -61,6 +61,7 @@ interface IBeefySonic {
         uint256 id;
         uint256 delegations;
         uint256 lastUndelegateEpoch;
+        uint256 openRequests;
         bool active;
         bool slashed;
         bool claim;

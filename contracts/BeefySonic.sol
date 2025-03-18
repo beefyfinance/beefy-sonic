@@ -193,9 +193,12 @@ contract BeefySonic is
             // Undelegate assets from the validator
             ISFC($.stakingContract).undelegate(validatorIds[i], wId, amounts[i]);
 
+            // Get the validator index by ID before updating
+            uint256 validatorIndex = _getValidatorIndex(validatorIds[i]);
+            
             // Update validator delegations and stored total
-            $.validators[i].delegations -= amounts[i];
-            $.validators[i].openRequests++;
+            $.validators[validatorIndex].delegations -= amounts[i];
+            $.validators[validatorIndex].openRequests++;
             $.storedTotal -= amounts[i];
 
             // Increment wId
@@ -506,6 +509,42 @@ contract BeefySonic is
     function previewRedeem(uint256) public pure virtual override returns (uint256) {
         revert ERC7540AsyncFlow();
     }
+
+    /** @dev See {IERC4626-maxDeposit}. */
+    function maxDeposit(address) public view virtual override returns (uint256) {
+        return _findLargestValidatorToDeposit();
+    }
+
+    /** @dev See {IERC4626-maxMint}. */
+    function maxMint(address) public view virtual override returns (uint256) {
+        return convertToShares(_findLargestValidatorToDeposit());
+    }
+
+    /// @dev Find the largest validator to deposit
+    /// @return largestCapacity of the validator capacity
+    function _findLargestValidatorToDeposit() private view returns (uint256 largestCapacity) {
+        BeefySonicStorage storage $ = getBeefySonicStorage();
+        largestCapacity = 0;
+
+        // Get max delegated ratio from the constants manager via the SFC
+        uint256 maxDelegatedRatio = IConstantsManager(ISFC($.stakingContract).constsAddress()).maxDelegatedRatio();
+
+        for (uint256 i = 0; i < $.validators.length; i++) {
+            uint256 selfStake = ISFC($.stakingContract).getSelfStake($.validators[i].id);
+            (, uint256 receivedStake,,,,,) = ISFC($.stakingContract).getValidator($.validators[i].id);
+            
+            // Validator delegated capacity is maxDelegatedRatio times the self-stake
+            uint256 delegatedCapacity = selfStake * maxDelegatedRatio / 1e18;
+
+            // Validator received stake is the amount of S received by the validator
+            uint256 capacity = delegatedCapacity - receivedStake;
+
+            if (capacity > largestCapacity) {
+                largestCapacity = capacity;
+            }
+        }
+    }
+
 
     /// @notice Get the rate used by balancer
     /// @return rate Rate

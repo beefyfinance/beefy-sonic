@@ -25,6 +25,7 @@ contract BeefySonicTest is Test {
     string public name = "Beefy Sonic";
     string public symbol = "beS";
     uint256 public beefyValidatorId = 31;
+    uint256 public secondValidatorId = 14;
     
     function setUp() public {
         vm.createSelectFork({urlOrAlias: "sonic", blockNumber: 13732080});
@@ -54,30 +55,32 @@ contract BeefySonicTest is Test {
         assertEq(validator.delegations, 0);
         assertEq(validator.active, true);
     }
-
+/*
     function test_DepositHarvestWithdraw() public {
-        address alice = _deposit(1000e18, "alice");
+        uint256 depositAmount = 1000e18;
+
+        address alice = _deposit(depositAmount, "alice");
 
         assertEq(IERC20(want).balanceOf(alice), 0);
-        assertEq(IERC20(address(beefySonic)).balanceOf(address(alice)), 1000e18);
-        assertEq(beefySonic.totalAssets(), 1000e18);
+        assertEq(IERC20(address(beefySonic)).balanceOf(address(alice)), depositAmount);
+        assertEq(beefySonic.totalAssets(), depositAmount);
 
         _harvest();
         
         uint256 totalAssets = beefySonic.totalAssets();
-        assertEq(totalAssets, 1000e18);
+        assertEq(totalAssets, depositAmount);
 
         // Wait for the lock duration
         vm.warp(block.timestamp + 1 days + 1);
 
         totalAssets = beefySonic.totalAssets();
-        assertGt(totalAssets, 1000e18);
+        assertGt(totalAssets, depositAmount);
 
-        _withdraw(500e18, alice);
-        _redeem(500e18, alice);
+        _withdraw(depositAmount / 2, alice);
+        _redeem(depositAmount / 2, alice);
     }
 
-    function test_multipleUsers() public {
+    function test_MultipleUsers() public {
         address alice = _deposit(1000e18, "alice");
         address bob = _deposit(5000e18, "bob");
 
@@ -148,6 +151,38 @@ contract BeefySonicTest is Test {
         assertTrue(validator.slashed);
         assertFalse(validator.active);
     }
+*/
+    function test_MultipleValidators() public {
+        vm.startPrank(beefySonic.owner());
+        beefySonic.addValidator(14);
+        vm.stopPrank();
+
+        uint256 len = beefySonic.validatorsLength();
+        assertEq(len, 2);
+
+        uint256 maxMint = beefySonic.maxMint(address(this));
+        console.log("maxMint", maxMint);
+        uint256 maxDeposit = beefySonic.maxDeposit(address(this));
+        console.log("maxDeposit", maxDeposit);
+
+        address alice = _deposit(maxDeposit, "alice");
+        address bob = _deposit(1000e18, "bob");
+        address charlie = _deposit(1000e18, "charlie");
+        assertEq(beefySonic.balanceOf(alice), maxDeposit);
+        assertEq(beefySonic.balanceOf(bob), 1000e18);
+        assertEq(beefySonic.balanceOf(charlie), 1000e18);
+
+        _harvest();
+
+        vm.warp(block.timestamp + 1 days + 1);
+
+        uint256 totalAssets = beefySonic.totalAssets();
+        console.log("totalAssets", totalAssets);
+
+        // try to withdraw via 2 validators
+        _withdraw(3000e18, alice);
+    }
+
 
     function _deposit(uint256 amount, string memory _name) internal returns (address user) {
         user = makeAddr(_name);

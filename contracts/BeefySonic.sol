@@ -76,40 +76,46 @@ contract BeefySonic is
         $.liquidityFeeRecipient = _liquidityFeeRecipient;
         $.liquidityFee = _liquidityFee;
         $.lockDuration = 1 days;
-        $.withdrawDuration = 14 days;
         $.minHarvest = 1e6;
         $.minWithdraw = 1e18;
         $.requestId++;
     }
 
+    /// @notice Check if the caller is an authorized operator or owner
+    /// @param _controller Controller address
+    function _onlyOperatorOrController(address _controller) private view {
+        BeefySonicStorage storage $ = getBeefySonicStorage();
+        if (!$.isOperator[_controller][msg.sender] && _controller != msg.sender) revert NotAuthorized();
+    }
+
     /// @notice Deposit assets into the vault
-    /// @param caller Address of the caller
-    /// @param receiver Address of the receiver
-    /// @param assets Amount of assets to deposit
-    /// @param shares Amount of shares to mint
-    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override whenNotPaused {
+    /// @param _caller Address of the caller
+    /// @param _receiver Address of the receiver
+    /// @param _assets Amount of assets to deposit
+    /// @param _shares Amount of shares to mint
+    function _deposit(address _caller, address _receiver, uint256 _assets, uint256 _shares) internal override whenNotPaused {
         BeefySonicStorage storage $ = getBeefySonicStorage(); 
 
         // We dont allow deposits of 0
-        if (assets == 0 || shares == 0) revert ZeroDeposit();
+        if (_assets == 0 || _shares == 0) revert ZeroDeposit();
 
         // Delegate assets to the validator only if a single validator can handle the deposit amount
-        uint256 validatorIndex = _getValidatorToDeposit(assets);  
+        uint256 validatorIndex = _getValidatorToDeposit(_assets);  
 
         // Update validator delegations and stored total
-        $.validators[validatorIndex].delegations += assets;
-        $.storedTotal += assets;
+        $.validators[validatorIndex].delegations += _assets;
+        $.storedTotal += _assets;
 
         // Transfer tokens and mint shares
-        super._deposit(caller, receiver, assets, shares);
+        super._deposit(_caller, _receiver, _assets, _shares);
 
         // Withdraw assets from the wrapped native token
-        IWrappedNative($.want).withdraw(assets);
+        IWrappedNative($.want).withdraw(_assets);
 
         // Delegate assets to the validator only if a single validator can handle the deposit amount
-        ISFC($.stakingContract).delegate{value: assets}($.validators[validatorIndex].id);
+        ISFC($.stakingContract).delegate{value: _assets}($.validators[validatorIndex].id);
 
-        emit Deposit(totalAssets(), assets);
+        emit Deposit(totalAssets(), _assets);
     }
 
     /// @notice Get the validator to deposit to
@@ -128,10 +134,9 @@ contract BeefySonic is
         for(uint256 i; i < $.validators.length; ++i) {
             Validator memory validator = $.validators[i];
 
-            // Check if the validator is slashed and mark it as inactive if it is
-            bool isSlashed = ISFC($.stakingContract).isSlashed(validator.id);
-            (uint256 isOk,,,,,,) = ISFC($.stakingContract).getValidator(validator.id);
-            if (isSlashed || isOk != 0) {
+            // Check if the validator is ok
+            bool isOk = _isValidatorOk(validator.id);
+            if (!isOk) {
                 $.validators[i].active = false;
                 continue;
             }
@@ -154,23 +159,23 @@ contract BeefySonic is
     }
 
     /// @notice Request a redeem, interface of EIP - 7540 https://eips.ethereum.org/EIPS/eip-7540
-    /// @param shares Amount of shares to redeem
-    /// @param controller Controller address
-    /// @param owner Owner address
+    /// @param _shares Amount of shares to redeem
+    /// @param _controller Controller address
+    /// @param _owner Owner address
     /// @return requestId Request ID
-    function requestRedeem(uint256 shares, address controller, address owner) external returns (uint256 requestId) {
+    function requestRedeem(uint256 _shares, address _controller, address _owner) external returns (uint256 requestId) {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         // Ensure the owner is the caller or an authorized operator
-        if (owner != msg.sender && !$.isOperator[owner][msg.sender]) revert NotAuthorized();
+        _onlyOperatorOrController(_controller);
 
         // Ensure the minimum withdrawal amount is met
-        if (shares < $.minWithdraw) revert MinWithdrawNotMet();
+        if (_shares < $.minWithdraw) revert MinWithdrawNotMet();
 
         // Convert shares to assets
-        uint256 assets = convertToAssets(shares);
+        uint256 assets = convertToAssets(_shares);
 
         // Burn shares of the owner will revert if shares is > balanceOf(owner)
-        _burn(owner, shares);
+        _burn(_owner, _shares);
 
         requestId = $.requestId;
         $.requestId++;
@@ -198,25 +203,25 @@ contract BeefySonic is
             $.wId++;
         }
 
-        uint32 claimableTimestamp = uint32(block.timestamp) + $.withdrawDuration;
+        uint32 claimableTimestamp = uint32(block.timestamp + withdrawDuration());
 
         // Store the request
-        $.pendingRedemptions[owner][requestId] =
+        $.pendingRedemptions[_owner][requestId] =
             RedemptionRequest({
                 assets: assets,
-                shares: shares,
+                shares: _shares,
                 claimableTimestamp: claimableTimestamp,
                 requestIds: requestIds,
                 validatorIds: validatorIds
             });
         
         // Add the request ID to the owner's pending requests
-        $.pendingRequests[owner].push(requestId);
+        $.pendingRequests[_owner].push(requestId);
 
         // Update total pending redeem assets
         $.totalPendingRedeemAssets += assets;
 
-        emit RedeemRequest(controller, owner, requestId, msg.sender, shares, claimableTimestamp);
+        emit RedeemRequest(_controller, _owner, requestId, msg.sender, _shares, claimableTimestamp);
         return requestId;
     }
 
@@ -273,27 +278,14 @@ contract BeefySonic is
         returns (uint256 shares)
     {
         BeefySonicStorage storage $ = getBeefySonicStorage();
-
-        // Ensure the controller is the caller or an authorized operator
-        if(!(_controller == msg.sender && !$.isOperator[_controller][msg.sender])) revert NotAuthorized();
        
-        RedemptionRequest storage request = $.pendingRedemptions[_controller][_requestId];
-        
-        // Ensure the request is claimable
-        if (request.claimableTimestamp > block.timestamp) revert NotClaimableYet();
+        _onlyOperatorOrController(_controller);
 
-        // Update total pending redeem assets
-        $.totalPendingRedeemAssets -= request.assets;
+        RedemptionRequest storage request = $.pendingRedemptions[_controller][_requestId];
 
         shares = request.shares;
-
-        // Withdraw assets from the SFC
-        uint256 amountWithdrawn = _withdrawFromSFC(_requestId, _controller);
-        _withdraw(msg.sender, _receiver, _controller, amountWithdrawn, shares);
-
-        // Delete the request to not allow double withdrawal
-        delete $.pendingRedemptions[_controller][_requestId];
-        _removeRequest(_controller, _requestId);
+        
+        _processWithdraw(request, _requestId, _receiver, _controller);
     }
 
     /// @notice Redeem shares for assets
@@ -310,24 +302,35 @@ contract BeefySonic is
         BeefySonicStorage storage $ = getBeefySonicStorage();
 
         // Ensure the controller is the caller or an authorized operator
-        if(!(_controller == msg.sender && !$.isOperator[_controller][msg.sender])) revert NotAuthorized();
+        _onlyOperatorOrController(_controller);
 
         RedemptionRequest storage request = $.pendingRedemptions[_controller][_requestId];
 
-        // Ensure the request is claimable
-        if (request.claimableTimestamp > block.timestamp) revert NotClaimableYet();
+        return _processWithdraw(request, _requestId, _receiver, _controller);
+    }
+
+    /// @notice Process a withdrawal
+    /// @param _request The request to process
+    /// @param _requestId The request ID
+    /// @param _receiver Address to receive the assets
+    /// @param _controller Controller address
+    /// @return assets Amount of assets redeemed
+    function _processWithdraw(RedemptionRequest storage _request, uint256 _requestId, address _receiver, address _controller) private returns (uint256 assets) {
+        BeefySonicStorage storage $ = getBeefySonicStorage();
+          // Ensure the request is claimable
+        if (_request.claimableTimestamp > block.timestamp) revert NotClaimableYet();
 
         // Update total pending redeem assets   
-        $.totalPendingRedeemAssets -= request.assets;
+        $.totalPendingRedeemAssets -= _request.assets;
 
         // Withdraw assets from the SFC
         uint256 amountWithdrawn = _withdrawFromSFC(_requestId, _controller);
-        _withdraw(msg.sender, _receiver, _controller, amountWithdrawn, request.shares);
+        _withdraw(msg.sender, _receiver, _controller, amountWithdrawn, _request.shares);
 
-        // Delete the request to not allow double withdrawal
+        // Delete the request to not allow double withdrawal        
         delete $.pendingRedemptions[_controller][_requestId];
         _removeRequest(_controller, _requestId);
-        
+
         return amountWithdrawn;
     }
 
@@ -404,30 +407,39 @@ contract BeefySonic is
     }
 
     /// @notice Internal withdraw function
-    /// @param caller Caller address
-    /// @param receiver Receiver address
-    /// @param controller Controller address
-    /// @param assets Amount of assets to withdraw
-    /// @param shares Amount of shares to withdraw
+    /// @param _caller Caller address
+    /// @param _receiver Receiver address
+    /// @param _controller Controller address
+    /// @param _assets Amount of assets to withdraw
+    /// @param _shares Amount of shares to withdraw
     function _withdraw(
-        address caller,
-        address receiver,
-        address controller,
-        uint256 assets,
-        uint256 shares
+        address _caller,
+        address _receiver,
+        address _controller,
+        uint256 _assets,
+        uint256 _shares
     ) internal virtual override {
         BeefySonicStorage storage $ = getBeefySonicStorage();
-        if (caller != controller) {
-            _spendAllowance(controller, caller, shares);
+        if (_caller != _controller) {
+            _spendAllowance(_controller, _caller, _shares);
         }
 
         // Deposit raw S into the wrapper
-        IWrappedNative($.want).deposit{value: assets}();
+        IWrappedNative($.want).deposit{value: _assets}();
 
         // Transfer the assets to the receiver
-        IERC20($.want).safeTransfer(receiver, assets);
+        IERC20($.want).safeTransfer(_receiver, _assets);
 
-        emit Withdraw(caller, receiver, controller, assets, shares);
+        emit Withdraw(_caller, _receiver, _controller, _assets, _shares);
+    }
+
+    /// @notice Check if a validator is ok
+    /// @param _validatorId ID of the validator
+    /// @return isOk True if the validator is ok
+    function _isValidatorOk(uint256 _validatorId) internal view returns (bool) {
+        BeefySonicStorage storage $ = getBeefySonicStorage();
+        (uint256 status,,,,,,) = ISFC($.stakingContract).getValidator(_validatorId);
+        return status == 0;
     }
 
     /// @notice Get the pending redeem request
@@ -543,26 +555,26 @@ contract BeefySonic is
     }
 
     /// @notice Charge fees
-    /// @param amount Amount of assets to charge
-    function _chargeFees(uint256 amount) internal {
+    /// @param _amount Amount of assets to charge
+    function _chargeFees(uint256 _amount) internal {
         BeefySonicStorage storage $ = getBeefySonicStorage();
-        uint256 beefyFee = amount * IFeeConfig($.beefyFeeConfig).getFees(address(this)).total / 1e18;
-        uint256 liquidityFee = amount * $.liquidityFee / 1e18;
+        uint256 beefyFee = _amount * IFeeConfig($.beefyFeeConfig).getFees(address(this)).total / 1e18;
+        uint256 liquidityFee = _amount * $.liquidityFee / 1e18;
 
         IWrappedNative($.want).deposit{value: liquidityFee + beefyFee}();
         IERC20($.want).safeTransfer($.beefyFeeRecipient, beefyFee);
         IERC20($.want).safeTransfer($.liquidityFeeRecipient, liquidityFee);
 
-        emit ChargedFees(amount, beefyFee, liquidityFee);
+        emit ChargedFees(_amount, beefyFee, liquidityFee);
     }
 
     /// @notice Get validator index by validator ID
-    /// @param validatorId Validator ID
+    /// @param _validatorId Validator ID
     /// @return index Index of the validator
-    function _getValidatorIndex(uint256 validatorId) internal view returns (uint256) {
+    function _getValidatorIndex(uint256 _validatorId) internal view returns (uint256) {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         for (uint256 i = 0; i < $.validators.length; i++) {
-            if ($.validators[i].id == validatorId) return i;
+            if ($.validators[i].id == _validatorId) return i;
         }
         revert ValidatorNotFound();
     }
@@ -584,15 +596,15 @@ contract BeefySonic is
     }
 
     /// @notice Add a new validator
-    /// @param validatorId ID of the validator
-    function addValidator(uint256 validatorId) external onlyOwner {
-        require(validatorId != 0, "BeefySonic: validator ID cannot be zero");
+    /// @param _validatorId ID of the validator
+    function addValidator(uint256 _validatorId) external onlyOwner {
+        require(_validatorId != 0, "BeefySonic: validator ID cannot be zero");
         
         BeefySonicStorage storage $ = getBeefySonicStorage();
         
         // Create new validator
         Validator memory validator = Validator({
-            id: validatorId,
+            id: _validatorId,
             delegations: 0,
             lastUndelegateEpoch: 0,
             active: true
@@ -602,7 +614,7 @@ contract BeefySonic is
         uint256 validatorIndex = $.validators.length;
         $.validators.push(validator);
         
-        emit ValidatorAdded(validatorId, validatorIndex);
+        emit ValidatorAdded(_validatorId, validatorIndex);
     }
 
     /// @notice Get the number of validators
@@ -612,10 +624,10 @@ contract BeefySonic is
     }
 
     /// @notice Get a validator
-    /// @param validatorIndex Index of the validator
+    /// @param _validatorIndex Index of the validator
     /// @return validator Validator struct
-    function validatorByIndex(uint256 validatorIndex) external view returns (Validator memory) {
-        return getBeefySonicStorage().validators[validatorIndex];
+    function validatorByIndex(uint256 _validatorIndex) external view returns (Validator memory) {
+        return getBeefySonicStorage().validators[_validatorIndex];
     }
 
     /// @notice Get the want token
@@ -624,26 +636,32 @@ contract BeefySonic is
         return getBeefySonicStorage().want;
     }
 
+    /// @notice Get the withdraw duration
+    /// @return withdrawDuration Withdraw duration
+    function withdrawDuration() public view returns (uint256) {
+        return IConstantsManager(ISFC(getBeefySonicStorage().stakingContract).constsAddress()).withdrawalPeriodTime();
+    }
+
     /// @notice Set a validator's active status
-    /// @param validatorIndex Index of the validator
-    /// @param active Whether the validator is active
-    function setValidatorActive(uint256 validatorIndex, bool active) external onlyOwner {
+    /// @param _validatorIndex Index of the validator
+    /// @param _active Whether the validator is active
+    function setValidatorActive(uint256 _validatorIndex, bool _active) external onlyOwner {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         
-        if (validatorIndex >= $.validators.length) revert InvalidValidatorIndex();
+        if (_validatorIndex >= $.validators.length) revert InvalidValidatorIndex();
         
-        $.validators[validatorIndex].active = active;
+        $.validators[_validatorIndex].active = _active;
         
-        emit ValidatorStatusChanged(validatorIndex, active);
+        emit ValidatorStatusChanged(_validatorIndex, _active);
     }
 
     /// @notice Set an operator to finalize the claim of the request to withdraw
-    /// @param operator Address of the operator
-    /// @param approved Whether the operator is approved
-    function setOperator(address operator, bool approved) public returns (bool) {
+    /// @param _operator Address of the operator
+    /// @param _approved Whether the operator is approved
+    function setOperator(address _operator, bool _approved) external onlyOwner returns (bool) {
         BeefySonicStorage storage $ = getBeefySonicStorage();
-        $.isOperator[msg.sender][operator] = approved;
-        emit OperatorSet(msg.sender, operator, approved);
+        $.isOperator[msg.sender][_operator] = _approved;
+        emit OperatorSet(msg.sender, _operator, _approved);
         return true;
     }
 
@@ -702,6 +720,12 @@ contract BeefySonic is
         BeefySonicStorage storage $ = getBeefySonicStorage();
         $.minWithdraw = _minWithdraw;
         emit MinWithdrawSet($.minWithdraw, _minWithdraw);
+    }
+
+    function setMinHarvest(uint256 _minHarvest) external onlyOwner {
+        BeefySonicStorage storage $ = getBeefySonicStorage();
+        $.minHarvest = _minHarvest;
+        emit MinHarvestSet($.minHarvest, _minHarvest);
     }
 
     /// @notice Pause the contract only callable by the owner or keeper

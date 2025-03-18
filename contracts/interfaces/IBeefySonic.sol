@@ -25,8 +25,6 @@ interface IBeefySonic {
         uint256 lastHarvest;
         // Duration to lock tokens
         uint32 lockDuration;
-        // Duration to withdraw tokens
-        uint32 withdrawDuration;
         // Withdraw request ID
         uint256 requestId;
         // Withdraw ID for SFC request
@@ -101,6 +99,7 @@ interface IBeefySonic {
    event LockDurationSet(uint256 oldLockDuration, uint256 newLockDuration);
    event KeeperSet(address indexed oldKeeper, address indexed newKeeper);
    event MinWithdrawSet(uint256 oldMinWithdraw, uint256 newMinWithdraw);
+   event MinHarvestSet(uint256 oldMinHarvest, uint256 newMinHarvest);
    event RedeemRequest(address indexed controller, address indexed owner, uint256 requestId, address indexed caller, uint256 shares, uint32 claimableTimestamp);
 
    /// @notice Request a redeem, interface of EIP - 7540 https://eips.ethereum.org/EIPS/eip-7540

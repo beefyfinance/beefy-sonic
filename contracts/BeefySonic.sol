@@ -134,6 +134,8 @@ contract BeefySonic is
         for(uint256 i; i < $.validators.length; ++i) {
             Validator memory validator = $.validators[i];
 
+            if (!validator.active) continue;
+
             // Check if the validator is ok
             bool isOk = _isValidatorOk(validator.id);
             if (!isOk) {
@@ -142,17 +144,16 @@ contract BeefySonic is
                 continue;
             }
 
-            // Check if the validator is active
-            if(validator.active) {
-                uint256 selfStake = ISFC($.stakingContract).getSelfStake(validator.id);
-                (, uint256 receivedStake,,,,,) = ISFC($.stakingContract).getValidator(validator.id);
-                
-                // Validator delegated capacity is maxDelegatedRatio times the self-stake
-                uint256 delegatedCapacity = selfStake * maxDelegatedRatio / 1e18;
-                
-                // Check if the validator has available capacity
-                if (delegatedCapacity >= (receivedStake + _amount)) return i;
-            }
+            // Check if the validator has available capacity
+            uint256 selfStake = ISFC($.stakingContract).getSelfStake(validator.id);
+            (, uint256 receivedStake,,,,,) = ISFC($.stakingContract).getValidator(validator.id);
+            
+            // Validator delegated capacity is maxDelegatedRatio times the self-stake
+            uint256 delegatedCapacity = selfStake * maxDelegatedRatio / 1e18;
+            
+            // Check if the validator has available capacity
+            if (delegatedCapacity >= (receivedStake + _amount)) return i;
+            
         }
 
         // No validators with capacity

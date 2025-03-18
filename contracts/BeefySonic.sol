@@ -8,6 +8,7 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Pau
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import {IBeefySonic} from "./interfaces/IBeefySonic.sol";
 import {IWrappedNative} from "./interfaces/IWrappedNative.sol";
@@ -30,6 +31,7 @@ contract BeefySonic is
     BeefySonicStorageUtils 
 {
     using SafeERC20 for IERC20;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     /// @dev Disable initializers on the implementation
     constructor() {
@@ -286,7 +288,7 @@ contract BeefySonic is
 
         shares = request.shares;
         
-        _processWithdraw(request, _requestId, _receiver, _controller);
+        _processWithdraw(request, _requestId, _receiver, _controller, false);
     }
 
     /// @notice Redeem shares for assets
@@ -307,7 +309,19 @@ contract BeefySonic is
 
         RedemptionRequest storage request = $.pendingRedemptions[_controller][_requestId];
 
-        return _processWithdraw(request, _requestId, _receiver, _controller);
+        return _processWithdraw(request, _requestId, _receiver, _controller, false);
+    }
+
+    /// @notice Process a withdrawal with emergency in case of slashing in withdraw process
+    /// @dev This function is used to override the check making sure the request amount is equal to actual amount withdrawn
+    /// @param _requestId Request ID of the withdrawal
+    /// @param _receiver Address to receive the assets
+    /// @param _controller Controller address
+    /// @return assets Amount of assets redeemed
+    function processWithdrawWithEmergency(uint256 _requestId, address _receiver, address _controller) external returns (uint256 assets) {
+        BeefySonicStorage storage $ = getBeefySonicStorage();
+        _onlyOperatorOrController(_controller);
+        return _processWithdraw($.pendingRedemptions[_controller][_requestId], _requestId, _receiver, _controller, true);
     }
 
     /// @notice Process a withdrawal
@@ -316,7 +330,7 @@ contract BeefySonic is
     /// @param _receiver Address to receive the assets
     /// @param _controller Controller address
     /// @return assets Amount of assets redeemed
-    function _processWithdraw(RedemptionRequest storage _request, uint256 _requestId, address _receiver, address _controller) private returns (uint256 assets) {
+    function _processWithdraw(RedemptionRequest storage _request, uint256 _requestId, address _receiver, address _controller, bool emergency) private returns (uint256 assets) {
         BeefySonicStorage storage $ = getBeefySonicStorage();
           // Ensure the request is claimable
         if (_request.claimableTimestamp > block.timestamp) revert NotClaimableYet();
@@ -327,6 +341,8 @@ contract BeefySonic is
         // Withdraw assets from the SFC
         uint256 amountWithdrawn = _withdrawFromSFC(_requestId, _controller);
         _withdraw(msg.sender, _receiver, _controller, amountWithdrawn, _request.shares);
+
+        if (amountWithdrawn < _request.assets && !emergency) revert WithdrawError();
 
         // Delete the request to not allow double withdrawal        
         delete $.pendingRedemptions[_controller][_requestId];
@@ -487,6 +503,12 @@ contract BeefySonic is
         revert ERC7540AsyncFlow();
     }
 
+    /// @notice Get the rate used by balancer
+    /// @return rate Rate
+    function getRate() public view returns (uint256) {
+        return convertToAssets(1e18);
+    }
+
     /// @notice Get the price per full share
     /// @return pricePerFullShare Price per full share
     function getPricePerFullShare() external view returns (uint256) {
@@ -599,16 +621,21 @@ contract BeefySonic is
     /// @notice Add a new validator
     /// @param _validatorId ID of the validator
     function addValidator(uint256 _validatorId) external onlyOwner {
-        require(_validatorId != 0, "BeefySonic: validator ID cannot be zero");
-        
         BeefySonicStorage storage $ = getBeefySonicStorage();
-        
+
+        // Check if validator already exists
+        for (uint256 i; i < $.validators.length; i++) {
+            if ($.validators[i].id == _validatorId) revert InvalidValidatorIndex();
+        }
+
+        if (!_isValidatorOk(_validatorId)) revert NoOK();
         // Create new validator
         Validator memory validator = Validator({
             id: _validatorId,
             delegations: 0,
             lastUndelegateEpoch: 0,
-            active: true
+            active: true,
+            slashed: false
         });
         
         // Add to validators array
@@ -657,8 +684,11 @@ contract BeefySonic is
         BeefySonicStorage storage $ = getBeefySonicStorage();
         
         if (_validatorIndex >= $.validators.length) revert InvalidValidatorIndex();
+
+        bool isSlashed = ISFC($.stakingContract).isSlashed($.validators[_validatorIndex].id);
         
         $.validators[_validatorIndex].active = _active;
+        $.validators[_validatorIndex].slashed = isSlashed;
         
         emit ValidatorStatusChanged(_validatorIndex, _active);
     }
@@ -753,5 +783,9 @@ contract BeefySonic is
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     /// @notice Receive function for receiving Native Sonic
-    receive() external payable {}
+    /// @dev we dont allow receiving Native Sonic unless from wrapper or SFC
+    receive() external payable {
+        BeefySonicStorage storage $ = getBeefySonicStorage();
+        if (msg.sender != address($.want) && msg.sender != address($.stakingContract)) revert NotAuthorized();
+    }
 }

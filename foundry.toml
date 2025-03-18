@@ -7,11 +7,11 @@ optimizer = true
 optimizer_runs = 200
 
 remappings = [
-    "forge-std/=lib/forge-std/src/",
-    "@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/",
-    "openzeppelin-contracts-upgradeable/=node_modules/eigenlayer/lib/openzeppelin-contracts-upgradeable/",
-    "@openzeppelin/=node_modules/@openzeppelin/",
-    "@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/"
+   "forge-std/=lib/forge-std/src/",
+   "@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/",
+   "openzeppelin-contracts-upgradeable/=node_modules/eigenlayer/lib/openzeppelin-contracts-upgradeable/",
+   "@openzeppelin/=node_modules/@openzeppelin/",
+   "@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/"
 ]
 
 [rpc_endpoints]

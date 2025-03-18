@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {EnumerableMap} from "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
+
 interface IBeefySonic {
    struct BeefySonicStorage {
         // Address of the underlying token
@@ -62,6 +64,7 @@ interface IBeefySonic {
         uint256 delegations;
         uint256 lastUndelegateEpoch;
         bool active;
+        bool slashed;
    }
    
    error ZeroDeposit();
@@ -80,6 +83,7 @@ interface IBeefySonic {
    error ValidatorNotFound();
    error MinWithdrawNotMet();
    error WithdrawError();
+   error NoOK();
 
    event Notify(address notifier, uint256 amount);
    event Deposit(uint256 TVL, uint256 amountDeposited);

@@ -63,6 +63,7 @@ interface IBeefySonic {
         uint256 lastUndelegateEpoch;
         bool active;
         bool slashed;
+        bool claim;
    }
    
    error ZeroDeposit();
@@ -102,6 +103,7 @@ interface IBeefySonic {
    event KeeperSet(address indexed oldKeeper, address indexed newKeeper);
    event MinWithdrawSet(uint256 oldMinWithdraw, uint256 newMinWithdraw);
    event MinHarvestSet(uint256 oldMinHarvest, uint256 newMinHarvest);
+   event ValidatorClaimSet(uint256 indexed validatorIndex, bool claim);
    event RedeemRequest(address indexed controller, address indexed owner, uint256 requestId, address indexed caller, uint256 shares, uint32 claimableTimestamp);
 
    /// @notice Request a redeem, interface of EIP - 7540 https://eips.ethereum.org/EIPS/eip-7540

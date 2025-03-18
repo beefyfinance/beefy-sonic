@@ -569,10 +569,13 @@ contract BeefySonic is
         BeefySonicStorage storage $ = getBeefySonicStorage();
         for (uint256 i = 0; i < $.validators.length; i++) {
             Validator storage validator = $.validators[i];
-            if (validator.active) {
+            if (validator.claim) {
                 // Claim rewards from the staking contract
                 uint256 pending = ISFC($.stakingContract).pendingRewards(address(this), validator.id);
                 if (pending > 0) ISFC($.stakingContract).claimRewards(validator.id);
+
+                // we claimed remaining rewards and now set it to claim to false
+                if (!validator.active && !_isValidatorOk(validator.id)) validator.claim = false;
             }
         }
     }
@@ -655,7 +658,8 @@ contract BeefySonic is
             delegations: 0,
             lastUndelegateEpoch: 0,
             active: true,
-            slashed: false
+            slashed: false,
+            claim: true
         });
         
         // Add to validators array
@@ -697,6 +701,12 @@ contract BeefySonic is
         _setValidatorActive(_validatorIndex, _active);
     }
 
+    function setValidatorClaim(uint256 _validatorIndex, bool _shouldClaim) external onlyOwner {
+        BeefySonicStorage storage $ = getBeefySonicStorage();
+        $.validators[_validatorIndex].claim = _shouldClaim;
+        emit ValidatorClaimSet(_validatorIndex, _shouldClaim);
+    }
+
     /// @notice Set a validator's active status
     /// @param _validatorIndex Index of the validator
     /// @param _active Whether the validator is active
@@ -709,6 +719,7 @@ contract BeefySonic is
         
         $.validators[_validatorIndex].active = _active;
         $.validators[_validatorIndex].slashed = isSlashed;
+        if (_active) $.validators[_validatorIndex].claim = true;
         
         emit ValidatorStatusChanged(_validatorIndex, _active);
     }

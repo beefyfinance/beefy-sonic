@@ -228,34 +228,41 @@ contract BeefySonic is
     /// @param _assets Amount of assets to withdraw
     /// @return _validatorIds Array of validator IDs
     /// @return _withdrawAmounts Array of withdraw amounts
-    function _getValidatorsToWithdraw(uint256 _assets) internal returns (uint256[] memory _validatorIds, uint256[] memory _withdrawAmounts) {
+    function _getValidatorsToWithdraw(uint256 _assets) private view returns (uint256[] memory _validatorIds, uint256[] memory _withdrawAmounts) {
         BeefySonicStorage storage $ = getBeefySonicStorage();
 
         uint256 remaining = _assets;
+        uint256[] memory validatorIds = new uint256[]($.validators.length);
+        uint256[] memory withdrawAmounts = new uint256[]($.validators.length);
+        uint256 currentIndex = 0;
 
         // loop backwards in the validators array withdraw from newest validator first
         for (uint256 i = $.validators.length; i > 0; i--) {
             Validator storage validator = $.validators[i-1];
 
             if (remaining > validator.delegations) {
-                $.validatorIds.push(validator.id);
-                $.withdrawAmounts.push(validator.delegations);
+                validatorIds[currentIndex] = validator.id;
+                withdrawAmounts[currentIndex] = validator.delegations;
                 remaining -= validator.delegations;
+                currentIndex++;
             } else {
-                $.validatorIds.push(validator.id);
-                $.withdrawAmounts.push(remaining);
+                validatorIds[currentIndex] = validator.id;
+                withdrawAmounts[currentIndex] = remaining;
                 remaining = 0;
+                currentIndex++;
                 break;
             }
         }
 
         if (remaining > 0) revert WithdrawError();
 
-        // We do this because we dont know the size of our array and cant push to memory so we store them and write to memory then delete
-        _validatorIds = $.validatorIds;
-        _withdrawAmounts = $.withdrawAmounts;
-        delete $.validatorIds;
-        delete $.withdrawAmounts;
+        _validatorIds = new uint256[](currentIndex);
+        _withdrawAmounts = new uint256[](currentIndex);
+
+        for (uint256 i; i < currentIndex; ++i) {
+            _validatorIds[i] = validatorIds[i];
+            _withdrawAmounts[i] = withdrawAmounts[i];
+        }
     }
     
     /// @notice Withdraw assets from the vault

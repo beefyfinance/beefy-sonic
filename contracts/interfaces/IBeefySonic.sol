@@ -41,10 +41,6 @@ interface IBeefySonic {
         uint256 totalPendingRedeemAssets;
         // Validator tracking
         Validator[] validators;
-        // Validator IDs
-        uint256[] validatorIds;
-        // Withdrawal amounts
-        uint256[] withdrawAmounts;
    }
 
    struct RedemptionRequest {

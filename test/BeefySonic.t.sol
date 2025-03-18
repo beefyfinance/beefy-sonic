@@ -110,11 +110,10 @@ contract BeefySonicTest is Test {
         
         // 3. Wait for the withdrawal period
         vm.warp(block.timestamp + 14 days + 1);
-
         _advanceEpoch(4);
 
         vm.startPrank(address(0xD100ae0000000000000000000000000000000000));
-        // Double sign bit indicating bad behavior 
+        // Double sign bit indicating bad behavior  1 << 7 = 128
         ISFC(stakingContract).deactivateValidator(beefyValidatorId, 128);
         vm.stopPrank();
         

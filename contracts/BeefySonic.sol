@@ -247,7 +247,7 @@ contract BeefySonic is
     /// @param _emergency Emergency flag
     /// @return _validatorIds Array of validator IDs
     /// @return _withdrawAmounts Array of withdraw amounts
-    function _getValidatorsToWithdraw(uint256 _assets, bool _emergency) private returns (uint256[] memory _validatorIds, uint256[] memory _withdrawAmounts) {
+    function _getValidatorsToWithdraw(uint256 _assets, bool _emergency) private view returns (uint256[] memory _validatorIds, uint256[] memory _withdrawAmounts) {
         BeefySonicStorage storage $ = getBeefySonicStorage();
 
         uint256 remaining = _assets;
@@ -255,19 +255,31 @@ contract BeefySonic is
         uint256[] memory withdrawAmounts = new uint256[]($.validators.length);
         uint256 currentIndex = 0;
 
-        // loop backwards in the validators array withdraw from newest validator first
-        for (uint256 i = $.validators.length; i > 0; i--) {
-            Validator storage validator = $.validators[i-1];
-
-            if (validator.delegations == 0) continue;
-
+        /// Loop and look to see if any validator is slashed, if they are and have enough delegations we allow a request to process in emergency mode
+        for (uint256 i; i < $.validators.length; i++) {
+            Validator storage validator = $.validators[i];
             bool isSlashed = ISFC($.stakingContract).isSlashed(validator.id);
 
             if (isSlashed) {
-                _setValidatorActive(i-1, false);
+                if (validator.delegations == 0) continue;
                 // brick redeem requests unless via emergency
                 if (!_emergency) revert WithdrawError();
+
+                if (remaining <= validator.delegations) {
+                    _validatorIds = new uint256[](1);
+                    _withdrawAmounts = new uint256[](1);
+                    _validatorIds[0] = validator.id;
+                    _withdrawAmounts[0] = remaining;
+                    return (_validatorIds, _withdrawAmounts);
+                }
             }
+        }
+
+        // loop backwards in the validators array withdraw from newest validator first
+        for (uint256 j = $.validators.length; j > 0; j--) {
+            Validator storage validator = $.validators[j-1];
+
+            if (validator.delegations == 0) continue;
 
             if (remaining > validator.delegations) {
                 validatorIds[currentIndex] = validator.id;

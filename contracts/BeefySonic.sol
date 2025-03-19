@@ -304,6 +304,8 @@ contract BeefySonic is
                     _withdrawAmounts[0] = remaining;
                     return (_validatorIds, _withdrawAmounts);
                 }
+
+                revert WithdrawError();
             }
         }
 

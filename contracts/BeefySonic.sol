@@ -196,7 +196,7 @@ contract BeefySonic is
         $.requestId++;
 
         // Get validators to withdraw from will be multiple if the amount is too large
-        (uint256[] memory validatorIds, uint256[] memory amounts) = _getValidatorsToWithdraw(assets);
+        (uint256[] memory validatorIds, uint256[] memory amounts) = _getValidatorsToWithdraw(assets, _emergency);
 
         // Create request IDs
         uint256[] memory requestIds = new uint256[](validatorIds.length);
@@ -244,9 +244,10 @@ contract BeefySonic is
 
     /// @notice Get validators to withdraw from
     /// @param _assets Amount of assets to withdraw
+    /// @param _emergency Emergency flag
     /// @return _validatorIds Array of validator IDs
     /// @return _withdrawAmounts Array of withdraw amounts
-    function _getValidatorsToWithdraw(uint256 _assets) private returns (uint256[] memory _validatorIds, uint256[] memory _withdrawAmounts) {
+    function _getValidatorsToWithdraw(uint256 _assets, bool _emergency) private returns (uint256[] memory _validatorIds, uint256[] memory _withdrawAmounts) {
         BeefySonicStorage storage $ = getBeefySonicStorage();
 
         uint256 remaining = _assets;
@@ -261,9 +262,11 @@ contract BeefySonic is
             if (validator.delegations == 0) continue;
 
             bool isSlashed = ISFC($.stakingContract).isSlashed(validator.id);
+            
             if (isSlashed) {
                 _setValidatorActive(i, false);
-                continue;
+                // brick redeem requests unless via emergency
+                if (!_emergency) revert WithdrawError();
             }
 
             if (remaining > validator.delegations) {

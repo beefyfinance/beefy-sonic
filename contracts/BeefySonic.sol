@@ -997,8 +997,13 @@ contract BeefySonic is
     /// @return supported True if the contract implements `interfaceId` and
     /// `interfaceId` is not 0xffffffff, false otherwise.
     function supportsInterface(bytes4 interfaceId) external pure returns (bool supported) {
-        /// EIP-7540: Asynchronous redemption Vaults MUST return the constant value true if 0x620ee8e4 is passed through the interfaceID argument.
-        return interfaceId == 0x620ee8e4;
+        /// Operator Methods
+        if (interfaceId == 0xe3bc4e65) return true;
+        /// Asynchronous Redemption Methods
+        if (interfaceId == 0x620ee8e4) return true;
+        /// ERC 7575
+        if (interfaceId == 0x2f0a18c5) return true;
+        return false;
     }
 
     /// @notice Receive function for receiving Native Sonic

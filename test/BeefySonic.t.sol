@@ -81,6 +81,8 @@ contract BeefySonicTest is Test {
         uint256 sfcWithdrawDuration = IConstantsManager(ISFC(stakingContract).constsAddress()).withdrawalPeriodTime();
         assertEq(withdrawDuration, sfcWithdrawDuration);
 
+        assertEq(beefySonic.share(), address(beefySonic));
+
         assertEq(validator.id, beefyValidatorId);
         assertEq(validator.delegations, 0);
         assertEq(validator.active, true);
@@ -344,8 +346,9 @@ contract BeefySonicTest is Test {
         vm.expectRevert(IBeefySonic.InvalidValidatorIndex.selector);
         beefySonic.setValidatorActive(15, true);
 
-        vm.expectRevert(IBeefySonic.NotAuthorized.selector);
-        payable(address(beefySonic)).call{value: 1e18}("0x");
+        assertEq(beefySonic.supportsInterface(0x620ee8e4), true);
+        assertEq(beefySonic.supportsInterface(0x2f0a18c5), true);
+        assertEq(beefySonic.supportsInterface(0xe3bc4e65), true);
 
         vm.stopPrank();
     }
@@ -359,7 +362,7 @@ contract BeefySonicTest is Test {
         vm.expectRevert(IBeefySonic.ZeroDeposit.selector);
         beefySonic.deposit(0, user);
 
-        beefySonic.deposit(amount, user);
+        beefySonic.deposit(amount, user, user);
         vm.stopPrank();
     }
 

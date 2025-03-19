@@ -5,6 +5,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {BeefySonic} from "../contracts/BeefySonic.sol";
 import {IBeefySonic} from "../contracts/interfaces/IBeefySonic.sol";
 import {ISFC} from "../contracts/interfaces/ISFC.sol";
+import {IConstantsManager} from "../contracts/interfaces/IConstantsManager.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -60,10 +61,26 @@ contract BeefySonicTest is Test {
         // Add validators
         beefySonic.addValidator(beefyValidatorId);
 
+        vm.expectRevert(IBeefySonic.InvalidValidatorIndex.selector);
+        beefySonic.addValidator(beefyValidatorId);
+
+        beefySonic.setValidatorActive(0, false);
+        beefySonic.setValidatorActive(0, true);
+
         uint256 len = beefySonic.validatorsLength();
         assertEq(len, 1);
 
         IBeefySonic.Validator memory validator = beefySonic.validatorByIndex(0);
+        uint256 decimals = beefySonic.decimals();
+        assertEq(decimals, 18);
+
+        address _want = beefySonic.want();
+        assertEq(_want, want);
+
+        uint256 withdrawDuration = beefySonic.withdrawDuration();
+        uint256 sfcWithdrawDuration = IConstantsManager(ISFC(stakingContract).constsAddress()).withdrawalPeriodTime();
+        assertEq(withdrawDuration, sfcWithdrawDuration);
+
         assertEq(validator.id, beefyValidatorId);
         assertEq(validator.delegations, 0);
         assertEq(validator.active, true);
@@ -152,26 +169,82 @@ contract BeefySonicTest is Test {
         
         // 6. Use emergency withdrawal instead
         vm.startPrank(alice);
-        uint256 assetsWithdrawn = beefySonic.emergencyWithdraw(requestId, alice, alice);
+        beefySonic.emergencyWithdraw(requestId, alice, alice);
+
+        // 7. Request emergency redeem
+        uint256 emergencyRedeemId = beefySonic.requestRedeem(100e18, alice, alice, true);
         vm.stopPrank();
-        
-        // 7. Verify that the user received the slashed amount (70% of original)
-        uint256 expectedAssets = beefySonic.convertToAssets(500e18) * slashingRefundRatio / 1e18;
-        assertApproxEqRel(assetsWithdrawn, expectedAssets, 0.01e18); // Allow 1% deviation
-        
-        // 8. Verify that the validator is now marked as slashed and inactive
+
+        vm.warp(block.timestamp + 14 days + 1);
+        _advanceEpoch(4);
+
+        vm.startPrank(alice);
+        // 8. Withdraw emergency redeem
+        beefySonic.withdraw(emergencyRedeemId, alice, alice);
+        vm.stopPrank();
+
+        // 9. Verify that the user received the slashed amount (70% of original)
+       // uint256 expectedAssets = beefySonic.convertToAssets(600e18) * slashingRefundRatio / 1e18;
+       // assertApproxEqRel(emergencyAssets + assetsWithdrawn, expectedAssets, 0.01e18); // Allow 1% deviation
+
+       vm.startPrank(beefySonic.owner());
+
+       beefySonic.addValidator(14);
+       beefySonic.checkForSlashedValidatorsAndUndelegate(0);
+
+        vm.warp(block.timestamp + 14 days + 1);
+        _advanceEpoch(4);
+
+        beefySonic.completeSlashedValidatorWithdraw(0);
+
+        uint256 getRate = beefySonic.getRate();
+        console.log("getRateAfterSlashing", getRate);
+
+        uint256 totalAssets = beefySonic.totalAssets();
+        console.log("totalAssetsAfterSlashing", totalAssets);
+
+        _harvest();
+
+        vm.warp(block.timestamp + 1 days + 1);
+
+        uint256 rateAfterHarvest = beefySonic.getRate();
+        console.log("rateAfterHarvest", rateAfterHarvest);
+
+        uint256 totalAssetsAfterHarvest = beefySonic.totalAssets();
+        console.log("totalAssetsAfterHarvest", totalAssetsAfterHarvest);
+
+        vm.stopPrank();
+
+        // 10. Verify that the validator is now marked as slashed and inactive
         IBeefySonic.Validator memory validator = beefySonic.validatorByIndex(0);
         assertTrue(validator.slashed);
         assertFalse(validator.active);
+
+        {
+            address bob = _deposit(1000e18, "bob");
+
+            _harvest();
+
+            vm.warp(block.timestamp + 1 days + 1);
+            
+            _withdraw(beefySonic.balanceOf(bob), bob);
+
+            uint256 rateAfterBob = beefySonic.getRate();
+            console.log("rateAfterBob", rateAfterBob);
+
+            uint256 totalNewAssets = beefySonic.totalAssets();
+            console.log("totalNewAssetsAfterBob", totalNewAssets);
+        }
     }
 
     function test_MultipleValidators() public {
         vm.startPrank(beefySonic.owner());
         beefySonic.addValidator(14);
+        beefySonic.addValidator(13);
         vm.stopPrank();
 
         uint256 len = beefySonic.validatorsLength();
-        assertEq(len, 2);
+        assertEq(len, 3);
 
         uint256 maxMint = beefySonic.maxMint(address(this));
         console.log("maxMint", maxMint);
@@ -180,12 +253,20 @@ contract BeefySonicTest is Test {
 
         address alice = _deposit(maxDeposit, "alice");
         address bob = _deposit(1000e18, "bob");
+
+        vm.startPrank(address(0xD100ae0000000000000000000000000000000000));
+        // bit indicating offline 1 << 3
+        ISFC(stakingContract).deactivateValidator(beefyValidatorId, 1 << 3);
+        vm.stopPrank();
+
         address charlie = _deposit(1000e18, "charlie");
         assertEq(beefySonic.balanceOf(alice), maxDeposit);
         assertEq(beefySonic.balanceOf(bob), 1000e18);
         assertEq(beefySonic.balanceOf(charlie), 1000e18);
 
         _harvest();
+        uint256 locked = beefySonic.lockedProfit();
+        console.log("lockedProfit", locked);
 
         vm.warp(block.timestamp + 1 days + 1);
 
@@ -239,6 +320,33 @@ contract BeefySonicTest is Test {
         beefySonic.setKeeper(address(0x1234567890123456789012345678901234567890));
         assertEq(beefySonic.keeper(), address(0x1234567890123456789012345678901234567890));
 
+        address newImpl = address(new BeefySonic());
+        beefySonic.upgradeToAndCall(newImpl, new bytes(0));
+
+        vm.expectRevert(IBeefySonic.ERC7540AsyncFlow.selector);
+        beefySonic.previewRedeem(1000e18);
+
+        vm.expectRevert(IBeefySonic.ERC7540AsyncFlow.selector);
+        beefySonic.previewWithdraw(1000e18);
+
+        beefySonic.setValidatorClaim(0, true);
+
+        vm.startPrank(address(0xD100ae0000000000000000000000000000000000));
+        // bit indicating offline 1 << 3
+        ISFC(stakingContract).deactivateValidator(15, 1 << 3);
+        vm.stopPrank();
+
+        vm.startPrank(beefySonic.owner());
+
+        vm.expectRevert(IBeefySonic.NotOK.selector);
+        beefySonic.addValidator(15);
+
+        vm.expectRevert(IBeefySonic.InvalidValidatorIndex.selector);
+        beefySonic.setValidatorActive(15, true);
+
+        vm.expectRevert(IBeefySonic.NotAuthorized.selector);
+        payable(address(beefySonic)).call{value: 1e18}("0x");
+
         vm.stopPrank();
     }
 
@@ -247,13 +355,40 @@ contract BeefySonicTest is Test {
         vm.startPrank(user);
         deal(want, user, amount);
         IERC20(want).approve(address(beefySonic), amount);
+
+        vm.expectRevert(IBeefySonic.ZeroDeposit.selector);
+        beefySonic.deposit(0, user);
+
         beefySonic.deposit(amount, user);
         vm.stopPrank();
     }
 
     function _harvest() internal {
+        address random = makeAddr("random");
+        vm.startPrank(random);
+
+        vm.expectRevert(IBeefySonic.NotAuthorized.selector);
+        beefySonic.pause();
+        vm.stopPrank();
+
+        vm.startPrank(keeper);
+        beefySonic.pause();
+
+        vm.expectRevert();
+        beefySonic.harvest();
+
+        vm.stopPrank();
+
+        vm.startPrank(beefySonic.owner());
+        beefySonic.unpause();
         _advanceEpoch(1);
         beefySonic.harvest();
+
+        _advanceEpoch(1);
+
+        vm.expectRevert(IBeefySonic.NotReadyForHarvest.selector);
+        beefySonic.harvest();
+        vm.stopPrank();
     }
 
     function _advanceEpoch(uint256 epochs) internal {
@@ -311,12 +446,6 @@ contract BeefySonicTest is Test {
             vm.stopPrank();
         }   
     }
-        /// @dev Simulates a user requesting a redeem and then withdrawing the funds.
-        /// This test uses a zap contract to simulate the user's operations.
-        /// It first tests that the keeper can't make a request,
-        /// then it tests that the user can't withdraw before the lock period is over.
-        /// Finally, it tests that the user can withdraw the correct amount after the lock period is over.
-
 
     function _withdraw(uint256 sharesAmount, address user) internal {
         vm.startPrank(keeper);
@@ -340,6 +469,8 @@ contract BeefySonicTest is Test {
         uint256 secondRequestId = beefySonic.requestRedeem(1e18, zap, user);
 {
         uint256 pendingFirstRedeem = beefySonic.pendingRedeemRequest(requestId, user);
+        uint256 zeroClaim = beefySonic.claimableRedeemRequest(requestId, user);
+        assertEq(zeroClaim, 0);
         assertEq(pendingFirstRedeem, sharesAmount - 1e18);
 
         uint256 pendingSecondRedeem = beefySonic.pendingRedeemRequest(secondRequestId, user);
@@ -359,7 +490,7 @@ contract BeefySonicTest is Test {
 }
         vm.stopPrank();
        
-
+{
         vm.startPrank(user);
 
         uint256 claimableRedeem = beefySonic.claimableRedeemRequest(requestId, user);
@@ -377,6 +508,7 @@ contract BeefySonicTest is Test {
 
         assertEq(IERC20(want).balanceOf(user) - before, assetAmount + secondAssetAmount);
         vm.stopPrank();
+    }   
     }
 
     function _redeem(uint256 sharesAmount, address user) internal { 

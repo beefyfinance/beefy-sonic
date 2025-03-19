@@ -78,7 +78,7 @@ interface IBeefySonic {
    error NotEnoughRewards();
    error ValidatorNotFound();
    error WithdrawError();
-   error NoOK();
+   error NotOK();
 
    event Notify(address notifier, uint256 amount);
    event ClaimedRewards(uint256 amount);

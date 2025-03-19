@@ -262,9 +262,9 @@ contract BeefySonic is
             if (validator.delegations == 0) continue;
 
             bool isSlashed = ISFC($.stakingContract).isSlashed(validator.id);
-            
+
             if (isSlashed) {
-                _setValidatorActive(i, false);
+                _setValidatorActive(i-1, false);
                 // brick redeem requests unless via emergency
                 if (!_emergency) revert WithdrawError();
             }
@@ -390,17 +390,17 @@ contract BeefySonic is
 
         if (recoverableAmount > 0) {
             uint256 before = address(this).balance;
-            ISFC($.stakingContract).withdraw(validator.id, validator.recoverableAmount);
+            ISFC($.stakingContract).withdraw(validator.id, validator.slashedWId);
             uint256 amountRecovered = address(this).balance - before;
             uint256 loss = validator.slashedDelegations - amountRecovered;
             $.storedTotal -= loss;
             validator.recoverableAmount = 0;
 
-            _getValidatorToDeposit(amountRecovered);
+            uint256 depositValidatorIndex = _getValidatorToDeposit(amountRecovered);
 
-            $.validators[validatorIndex].delegations += amountRecovered;
+            $.validators[depositValidatorIndex].delegations += amountRecovered;
 
-            ISFC($.stakingContract).delegate{value: amountRecovered}($.validators[validatorIndex].id);
+            ISFC($.stakingContract).delegate{value: amountRecovered}($.validators[depositValidatorIndex].id);
         }
     }
 
@@ -549,10 +549,6 @@ contract BeefySonic is
         uint256 _shares
     ) internal virtual override {
         BeefySonicStorage storage $ = getBeefySonicStorage();
-        if (_caller != _controller) {
-            _spendAllowance(_controller, _caller, _shares);
-        }
-
         // Deposit raw S into the wrapper
         IWrappedNative($.want).deposit{value: _assets}();
 
@@ -850,7 +846,7 @@ contract BeefySonic is
             if ($.validators[i].id == _validatorId) revert InvalidValidatorIndex();
         }
 
-        if (!_isValidatorOk(_validatorId)) revert NoOK();
+        if (!_isValidatorOk(_validatorId)) revert NotOK();
         // Create new validator
         Validator memory validator = Validator({
             id: _validatorId,

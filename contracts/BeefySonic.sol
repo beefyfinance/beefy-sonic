@@ -715,6 +715,15 @@ contract BeefySonic is
         revert ValidatorNotFound();
     }
 
+    /// @notice Check if an operator is authorized to withdraw
+    /// @param _controller Controller address
+    /// @param _operator Operator address
+    /// @return isOperator True if the operator is authorized
+    function isOperator(address _controller, address _operator) external view returns (bool) {
+        BeefySonicStorage storage $ = getBeefySonicStorage();
+        return $.isOperator[_controller][_operator];
+    }
+
     /// @notice Remaining locked profit after a notification
     /// @return locked Amount remaining to be vested
     function lockedProfit() public view returns (uint256 locked) {
@@ -976,6 +985,21 @@ contract BeefySonic is
     /// @notice Function to authorize upgrades, can only be called by the owner
     /// @param newImplementation Address of the new implementation
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    /// @notice EIP 7575: Get the share token address
+    /// @return shareTokenAddress Address of the share token which is this address.
+    function share() external view returns (address shareTokenAddress) {
+        return address(this);
+    }
+
+    /// @notice Checks if a contract implements an interface.
+    /// @param interfaceId The interface identifier, as specified in ERC-165.
+    /// @return supported True if the contract implements `interfaceId` and
+    /// `interfaceId` is not 0xffffffff, false otherwise.
+    function supportsInterface(bytes4 interfaceId) external pure returns (bool supported) {
+        /// EIP-7540: Asynchronous redemption Vaults MUST return the constant value true if 0x620ee8e4 is passed through the interfaceID argument.
+        return interfaceId == 0x620ee8e4;
+    }
 
     /// @notice Receive function for receiving Native Sonic
     /// @dev we dont allow receiving Native Sonic unless from wrapper or SFC

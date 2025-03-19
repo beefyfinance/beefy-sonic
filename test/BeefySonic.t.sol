@@ -32,6 +32,19 @@ contract BeefySonicTest is Test {
         implementation = new BeefySonic();
         beefySonic = BeefySonic(payable(address(_proxy(address(implementation)))));
 
+        vm.expectRevert(IBeefySonic.InvalidLiquidityFee.selector);
+        beefySonic.initialize(
+            want,
+            stakingContract,
+            beefyFeeRecipient,
+            keeper,
+            beefyFeeConfig,
+            liquidityFeeRecipient,
+            liquidityFee + 0.1e18,
+            name,
+            symbol
+        );
+
         beefySonic.initialize(
             want,
             stakingContract,
@@ -298,6 +311,12 @@ contract BeefySonicTest is Test {
             vm.stopPrank();
         }   
     }
+        /// @dev Simulates a user requesting a redeem and then withdrawing the funds.
+        /// This test uses a zap contract to simulate the user's operations.
+        /// It first tests that the keeper can't make a request,
+        /// then it tests that the user can't withdraw before the lock period is over.
+        /// Finally, it tests that the user can withdraw the correct amount after the lock period is over.
+
 
     function _withdraw(uint256 sharesAmount, address user) internal {
         vm.startPrank(keeper);
@@ -311,7 +330,7 @@ contract BeefySonicTest is Test {
         beefySonic.setOperator(zap, true);
         vm.stopPrank();
 
-        vm.startPrank(zap);
+       vm.startPrank(zap);
 
         uint256 before = IERC20(want).balanceOf(user);
 
@@ -319,6 +338,15 @@ contract BeefySonicTest is Test {
         uint256 secondAssetAmount = beefySonic.convertToAssets(1e18);
         uint256 requestId = beefySonic.requestRedeem(sharesAmount - 1e18, zap, user);
         uint256 secondRequestId = beefySonic.requestRedeem(1e18, zap, user);
+{
+        uint256 pendingFirstRedeem = beefySonic.pendingRedeemRequest(requestId, user);
+        assertEq(pendingFirstRedeem, sharesAmount - 1e18);
+
+        uint256 pendingSecondRedeem = beefySonic.pendingRedeemRequest(secondRequestId, user);
+        assertEq(pendingSecondRedeem, 1e18);
+
+        BeefySonic.RedemptionRequest[] memory requests = beefySonic.userPendingRedeemRequests(user);
+        assertEq(requests.length, 2);
 
         vm.expectRevert(IBeefySonic.NotClaimableYet.selector);
         beefySonic.withdraw(requestId, zap, user);
@@ -328,8 +356,19 @@ contract BeefySonicTest is Test {
 
         // Mock currentEpoch call on SFC
         _advanceEpoch(4);
+}
+        vm.stopPrank();
+       
 
         vm.startPrank(user);
+
+        uint256 claimableRedeem = beefySonic.claimableRedeemRequest(requestId, user);
+        uint256 pendingRedeem = beefySonic.pendingRedeemRequest(requestId, user);
+        assertEq(pendingRedeem, 0);
+        assertEq(claimableRedeem, sharesAmount - 1e18);
+
+        uint256 secondClaimableRedeem = beefySonic.claimableRedeemRequest(secondRequestId, user);
+        assertEq(secondClaimableRedeem, 1e18);
 
         uint256 shares = beefySonic.withdraw(requestId, user, user);
         assertEq(shares, sharesAmount - 1e18);

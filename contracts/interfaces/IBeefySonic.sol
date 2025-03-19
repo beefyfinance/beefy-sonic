@@ -47,6 +47,7 @@ interface IBeefySonic {
         uint256 assets;
         uint256 shares;
         uint32 claimableTimestamp;
+        bool emergency;
         uint256[] requestIds;
         uint256[] validatorIds;
    }

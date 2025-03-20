@@ -9,9 +9,6 @@ import {IConstantsManager} from "../contracts/interfaces/IConstantsManager.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-/// NOTES: 
-/// - If a validator is slashed the user who tries to withdraw and gets that validator is punished 
-
 contract BeefySonicTest is Test {
     BeefySonic public beefySonic;
     BeefySonic public implementation;

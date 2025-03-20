@@ -1048,7 +1048,6 @@ contract BeefySonic is
     /// @notice Checks if a contract implements an interface.
     /// @param interfaceId The interface identifier, as specified in ERC-165.
     /// @return supported True if the contract implements `interfaceId` and
-    /// `interfaceId` is not 0xffffffff, false otherwise.
     function supportsInterface(bytes4 interfaceId) external pure returns (bool supported) {
         if (interfaceId == 0xe3bc4e65 || interfaceId == 0x620ee8e4 || interfaceId == 0x2f0a18c5 || interfaceId == 0x01ffc9a7) return true;
         return false;

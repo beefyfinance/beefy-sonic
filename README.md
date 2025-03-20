@@ -1,6 +1,6 @@
 # BeefySonic
 
-BeefySonic is a liquid staking solution for Sonic tokens on the Sonic network, developed by Beefy Finance. It allows users to stake their Sonic tokens while maintaining liquidity through a tokenized representation (beS) that earns staking rewards.
+BeefySonic is a liquid staking solution for Sonic tokens on the Sonic network, developed by Beefy. It allows users to stake their Sonic tokens while maintaining liquidity through a tokenized representation (beS) that earns staking rewards.
 
 ## Overview
 
@@ -9,34 +9,47 @@ BeefySonic enables users to:
 - Earn staking rewards automatically
 - Request redemption of beS tokens back to Sonic tokens
 - Withdraw Sonic tokens after the redemption period
+- Protection against validator slashing events
 
-The contract implements the ERC-4626 Tokenized Vault Standard and ERC-7540 Async Redemption Extension, providing a familiar interface for integrations.
+The contract implements the ERC-4626 Tokenized Vault Standard, ERC-7540 Async Redemption Extension, and ERC-7575 Share Token Interface, providing a familiar interface for integrations.
 
 ## Key Features
 
 - **Validator Management**: Distributes deposits across multiple validators
 - **Automatic Harvesting**: Periodically claims and distributes staking rewards
-- **Withdrawal Protection**: Implements safeguards against withdrawal DDoS attacks
+- **Slashing Protection**: Socializes losses when validators are slashed to protect users
+- **Emergency Withdrawals**: Allows users to withdraw funds even during slashing events
 - **Fee System**: Configurable fee structure for protocol sustainability
+- **Operator System**: Allows users to authorize operators to manage their funds
 
 ## Architecture
 
 The system consists of several key components:
 
 - **BeefySonic.sol**: Main contract implementing the ERC-4626 vault
+- **BeefySonicStorageUtils.sol**: Storage layout and utilities
 - **IBeefySonic.sol**: Interface defining the contract's functions and events
 - **ISFC.sol**: Interface for interacting with the Sonic Staking Contract
+- **IConstantsManager.sol**: Interface for accessing network constants
 
 ## Security Features
 
-BeefySonic implements several security measures to prevent DDoS attacks:
+BeefySonic implements several security measures:
 
-- **Minimum Withdrawal Amount**: Prevents dust attacks by enforcing a minimum withdrawal size
-- **Epoch-Based Withdrawal Limits**: Each validator tracks the last epoch in which a withdrawal was processed, preventing multiple withdrawals from the same validator in the same epoch
-- **Validator Skipping Logic**: During withdrawals, the contract skips validators that have already processed a withdrawal in the current epoch
 - **Multi-Validator Withdrawal Distribution**: Large withdrawals are distributed across multiple validators
+- **Slashing Protection**: Detects slashed validators and socializes losses across all users
+- **Zero Address Checks**: Prevents critical operations with zero addresses
+- **Emergency Withdrawal Mode**: Allows users to withdraw funds even during adverse conditions
 
-These mechanisms work together to ensure fair access to withdrawal functionality while preventing malicious users from monopolizing the withdrawal capacity, even when using multiple wallets.
+## Slashing Protection
+
+When a validator is slashed, BeefySonic:
+1. Detects the slashing event during regular operations
+2. Marks the validator as inactive to prevent further deposits
+3. Calculates the recoverable amount based on the slashing refund ratio
+4. Initiates the withdrawal process for any recoverable funds
+5. Socializes the loss across all users proportionally
+6. Allows emergency withdrawals to ensure users can access their funds
 
 ## Getting Started
 
@@ -56,17 +69,20 @@ cd beefy-sonic
 yarn install
 
 # Build the contracts
-yarn build
+forge build
 ```
 
 ### Testing
 
 ```bash
 # Run all tests
-yarn test
+forge test
 
 # Run specific test
 forge test --match-test test_DepositHarvestWithdraw -vvv
+
+# Generate coverage report
+forge coverage --report lcov
 ```
 
 ## Contract Deployment
@@ -79,7 +95,7 @@ The BeefySonic contract is designed to be deployed behind a proxy for upgradeabi
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under MIT License - see the LICENSE file for details.
 
 ## Acknowledgements
 

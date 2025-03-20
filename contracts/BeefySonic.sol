@@ -150,7 +150,7 @@ contract BeefySonic is
     /// @notice Get the validator to deposit to
     /// @param _amount Amount of assets to deposit
     /// @return validatorId ID of the validator
-    function _getValidatorToDeposit(uint256 _amount) internal returns (uint256 validatorId) {
+    function _getValidatorToDeposit(uint256 _amount) private returns (uint256 validatorId) {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         
         // Ensure we have validators
@@ -502,7 +502,7 @@ contract BeefySonic is
     /// @notice Remove a request from the pending requests
     /// @param _controller Controller address
     /// @param _requestId Request ID
-    function _removeRequest(address _controller, uint256 _requestId) internal {
+    function _removeRequest(address _controller, uint256 _requestId) private {
         BeefySonicStorage storage $ = getBeefySonicStorage();
 
         // Get the pending requests array for the controller
@@ -538,7 +538,7 @@ contract BeefySonic is
     /// @param _requestId Request ID of the withdrawal
     /// @param _controller Controller address
     /// @return amountWithdrawn Amount of assets withdrawn
-    function _withdrawFromSFC(uint256 _requestId, address _controller) internal returns (uint256 amountWithdrawn) {
+    function _withdrawFromSFC(uint256 _requestId, address _controller) private returns (uint256 amountWithdrawn) {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         RedemptionRequest storage request = $.pendingRedemptions[_controller][_requestId];
         
@@ -596,7 +596,7 @@ contract BeefySonic is
     /// @notice Check if a validator is ok
     /// @param _validatorId ID of the validator
     /// @return isOk True if the validator is ok
-    function _isValidatorOk(uint256 _validatorId) internal view returns (bool) {
+    function _isValidatorOk(uint256 _validatorId) private view returns (bool) {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         (uint256 status,,,,,,) = ISFC($.stakingContract).getValidator(_validatorId);
         return status == 0;
@@ -713,7 +713,7 @@ contract BeefySonic is
     }
 
     /// @notice Claim pending rewards from validators
-    function _claim() internal {
+    function _claim() private {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         for (uint256 i = 0; i < $.validators.length; i++) {
             Validator storage validator = $.validators[i];
@@ -730,7 +730,7 @@ contract BeefySonic is
 
     /// @notice Charge fees
     /// @param _amount Amount of assets to charge
-    function _chargeFees(uint256 _amount) internal {
+    function _chargeFees(uint256 _amount) private {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         uint256 beefyFeeAmount = _amount * IFeeConfig($.beefyFeeConfig).getFees(address(this)).total / 1e18;
         uint256 liquidityFeeAmount = 0;
@@ -749,7 +749,7 @@ contract BeefySonic is
     /// @notice Get validator index by validator ID
     /// @param _validatorId Validator ID
     /// @return index Index of the validator
-    function _getValidatorIndex(uint256 _validatorId) internal view returns (uint256) {
+    function _getValidatorIndex(uint256 _validatorId) private view returns (uint256) {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         for (uint256 i; i < $.validators.length; i++) {
             if ($.validators[i].id == _validatorId) return i;
@@ -785,7 +785,7 @@ contract BeefySonic is
 
     /// @notice Get the rate used by Balancer
     /// @return rate Rate
-    function getRate() public view returns (uint256) {
+    function getRate() external view returns (uint256) {
         return convertToAssets(1e18);
     }
 
@@ -802,7 +802,7 @@ contract BeefySonic is
     }
 
     /// @notice Get the liquidity fee recipient
-    function liquidityFeeRecipient() public view returns (address) {
+    function liquidityFeeRecipient() external view returns (address) {
         return getBeefySonicStorage().liquidityFeeRecipient;
     }
 

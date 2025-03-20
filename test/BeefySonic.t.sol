@@ -134,6 +134,20 @@ contract BeefySonicTest is Test {
         _withdraw(1000e18, bob);
     }
 
+    function test_RedeemAnotherUser() public {
+        address alice = _deposit(1000e18, "alice");
+        address bob = makeAddr("bob");
+
+        assertEq(IERC20(want).balanceOf(alice), 0);
+        assertEq(IERC20(address(beefySonic)).balanceOf(address(alice)), 1000e18);
+
+        vm.startPrank(bob); 
+        vm.expectRevert();
+        beefySonic.requestRedeem(1000e18, bob, alice);
+        assertEq(IERC20(address(beefySonic)).balanceOf(address(alice)), 1000e18);
+        vm.stopPrank();
+    }
+
     function test_SlashedValidatorWithdraw() public {
         // 1. First deposit funds with a user
         address alice = _deposit(1000e18, "alice");

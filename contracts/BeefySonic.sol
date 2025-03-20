@@ -217,7 +217,7 @@ contract BeefySonic is
     function _requestRedeem(uint256 _shares, address _controller, address _owner, bool _emergency) private returns (uint256 requestId) {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         // Ensure the owner is the caller or an authorized operator
-        _onlyOperatorOrController(_controller);
+        _onlyOperatorOrController(_owner);
 
         // Convert shares to assets
         uint256 assets = convertToAssets(_shares);

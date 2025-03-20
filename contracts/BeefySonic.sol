@@ -340,6 +340,17 @@ contract BeefySonic is
             _withdrawAmounts[i] = withdrawAmounts[i];
         }
     }
+
+    /// @notice Withdraw assets from the vault
+    /// @param _requestIds Array of request IDs
+    /// @param _receiver Address to receive the assets
+    /// @param _controller Controller address
+    /// @return shares Amount of shares withdrawn
+    function withdraw(uint256[] memory _requestIds, address _receiver, address _controller) external returns (uint256 shares) {
+        for (uint256 i; i < _requestIds.length; ++i) {
+            shares += withdraw(_requestIds[i], _receiver, _controller);
+        }
+    }
     
     /// @notice Withdraw assets from the vault
     /// @param _requestId Request ID of the withdrawal
@@ -482,7 +493,7 @@ contract BeefySonic is
         // Delete the request to not allow double withdrawal        
         delete $.pendingRedemptions[_controller][_requestId];
         _removeRequest(_controller, _requestId);
-       
+    
         _withdraw(msg.sender, _receiver, _controller, amountWithdrawn, shares);
 
         return amountWithdrawn;

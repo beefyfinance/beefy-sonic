@@ -474,13 +474,16 @@ contract BeefySonic is
 
         // Withdraw assets from the SFC
         uint256 amountWithdrawn = _withdrawFromSFC(_requestId, _controller);
-        _withdraw(msg.sender, _receiver, _controller, amountWithdrawn, _request.shares);
 
         if (amountWithdrawn < _request.assets && !emergency) revert WithdrawError();
+
+        uint256 shares = _request.shares;
 
         // Delete the request to not allow double withdrawal        
         delete $.pendingRedemptions[_controller][_requestId];
         _removeRequest(_controller, _requestId);
+       
+        _withdraw(msg.sender, _receiver, _controller, amountWithdrawn, shares);
 
         return amountWithdrawn;
     }

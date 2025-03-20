@@ -513,7 +513,7 @@ contract BeefySonic is
         
         // Find the index of the request ID
         uint256 index = type(uint256).max; // Invalid index to start
-        for (uint256 i = 0; i < pendingRequests.length; i++) {
+        for (uint256 i; i < pendingRequests.length; ++i) {
             if (pendingRequests[i] == _requestId) {
                 index = i;
                 break;
@@ -546,7 +546,7 @@ contract BeefySonic is
         uint256 before = address(this).balance;
 
         // Withdraw assets from the validators
-        for (uint256 j; j < request.withdrawalIds.length; j++) {
+        for (uint256 j; j < request.withdrawalIds.length; ++j) {
             uint256 validatorId = request.validatorIds[j];
             uint256 requestId = request.withdrawalIds[j];
 
@@ -650,7 +650,7 @@ contract BeefySonic is
         // Get max delegated ratio from the constants manager via the SFC
         uint256 maxDelegatedRatio = IConstantsManager(ISFC($.stakingContract).constsAddress()).maxDelegatedRatio();
 
-        for (uint256 i = 0; i < $.validators.length; i++) {
+        for (uint256 i; i < $.validators.length; ++i) {
             uint256 selfStake = ISFC($.stakingContract).getSelfStake($.validators[i].id);
             (, uint256 receivedStake,,,,,) = ISFC($.stakingContract).getValidator($.validators[i].id);
 
@@ -715,7 +715,7 @@ contract BeefySonic is
     /// @notice Claim pending rewards from validators
     function _claim() private {
         BeefySonicStorage storage $ = getBeefySonicStorage();
-        for (uint256 i = 0; i < $.validators.length; i++) {
+        for (uint256 i; i < $.validators.length; ++i) {
             Validator storage validator = $.validators[i];
             if (validator.claim) {
                 // Claim rewards from the staking contract
@@ -751,7 +751,7 @@ contract BeefySonic is
     /// @return index Index of the validator
     function _getValidatorIndex(uint256 _validatorId) private view returns (uint256) {
         BeefySonicStorage storage $ = getBeefySonicStorage();
-        for (uint256 i; i < $.validators.length; i++) {
+        for (uint256 i; i < $.validators.length; ++i) {
             if ($.validators[i].id == _validatorId) return i;
         }
         revert ValidatorNotFound();

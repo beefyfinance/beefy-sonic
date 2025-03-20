@@ -68,12 +68,11 @@ contract BeefySonic is
         if (_liquidityFee > 0.1e18) revert InvalidLiquidityFee();
 
         BeefySonicStorage storage $ = getBeefySonicStorage();
-        $.want = _want;
-        $.stakingContract = _stakingContract;
-        $.beefyFeeRecipient = _beefyFeeRecipient;
-        $.keeper = _keeper;
-        $.beefyFeeConfig = _beefyFeeConfig;
-        $.liquidityFeeRecipient = _liquidityFeeRecipient;
+        $.stakingContract = _NoZeroAddress(_stakingContract);
+        $.beefyFeeRecipient = _NoZeroAddress(_beefyFeeRecipient);
+        $.keeper = _NoZeroAddress(_keeper);
+        $.beefyFeeConfig = _NoZeroAddress(_beefyFeeConfig);
+        $.liquidityFeeRecipient = _NoZeroAddress(_liquidityFeeRecipient);
         $.liquidityFee = _liquidityFee;
         $.lockDuration = 1 days;
         $.minHarvest = 1e6;
@@ -126,6 +125,7 @@ contract BeefySonic is
     /// @param _shares Amount of shares to mint
     function _deposit(address _caller, address _receiver, uint256 _assets, uint256 _shares) internal override whenNotPaused {
         BeefySonicStorage storage $ = getBeefySonicStorage(); 
+        _NoZeroAddress(_receiver);
 
         // We dont allow deposits of 0
         if (_assets == 0 || _shares == 0) revert ZeroDeposit();
@@ -141,7 +141,7 @@ contract BeefySonic is
         super._deposit(_caller, _receiver, _assets, _shares);
 
         // Withdraw assets from the wrapped native token
-        IWrappedNative($.want).withdraw(_assets);
+        IWrappedNative(asset()).withdraw(_assets);
 
         // Delegate assets to the validator only if a single validator can handle the deposit amount
         ISFC($.stakingContract).delegate{value: _assets}($.validators[validatorIndex].id);
@@ -458,6 +458,7 @@ contract BeefySonic is
     /// @return assets Amount of assets redeemed
     function _processWithdraw(RedemptionRequest storage _request, uint256 _requestId, address _receiver, address _controller, bool emergency) private returns (uint256 assets) {
         BeefySonicStorage storage $ = getBeefySonicStorage();
+        _NoZeroAddress(_receiver);
           // Ensure the request is claimable
         if (_request.claimableTimestamp > block.timestamp) revert NotClaimableYet();
 
@@ -594,12 +595,11 @@ contract BeefySonic is
         uint256 _assets,
         uint256 _shares
     ) internal virtual override {
-        BeefySonicStorage storage $ = getBeefySonicStorage();
         // Deposit raw S into the wrapper
-        IWrappedNative($.want).deposit{value: _assets}();
+        IWrappedNative(asset()).deposit{value: _assets}();
 
         // Transfer the assets to the receiver
-        IERC20($.want).safeTransfer(_receiver, _assets);
+        IERC20(asset()).safeTransfer(_receiver, _assets);
 
         emit Withdraw(_caller, _receiver, _controller, _assets, _shares);
     }
@@ -746,11 +746,11 @@ contract BeefySonic is
 
         uint256 total = beefyFeeAmount + liquidityFeeAmount;
         if (total > 0) {
-            IWrappedNative($.want).deposit{value: total}();
-            if (beefyFeeAmount > 0) IERC20($.want).safeTransfer($.beefyFeeRecipient, beefyFeeAmount);
-            if (liquidityFeeAmount > 0) IERC20($.want).safeTransfer($.liquidityFeeRecipient, liquidityFeeAmount);
+            IWrappedNative(asset()).deposit{value: total}();
+            if (beefyFeeAmount > 0) IERC20(asset()).safeTransfer($.beefyFeeRecipient, beefyFeeAmount);
+            if (liquidityFeeAmount > 0) IERC20(asset()).safeTransfer($.liquidityFeeRecipient, liquidityFeeAmount);
         }
-        
+
         emit ChargedFees(_amount, beefyFeeAmount, liquidityFeeAmount);
     }
 
@@ -791,13 +791,13 @@ contract BeefySonic is
     }
 
 
-    /// @notice Get the rate used by balancer
+    /// @notice Get the rate used by Balancer
     /// @return rate Rate
     function getRate() public view returns (uint256) {
         return convertToAssets(1e18);
     }
 
-    /// @notice Get the price per full share
+    /// @notice Get the price per full share used by Beefy
     /// @return pricePerFullShare Price per full share
     function getPricePerFullShare() external view returns (uint256) {
         return convertToAssets(1e18);
@@ -868,7 +868,7 @@ contract BeefySonic is
     /// @notice Get the want token
     /// @return want Address of the want token
     function want() external view returns (address) {
-        return getBeefySonicStorage().want;
+        return asset();
     }
 
     /// @notice Get the Beefy fee recipient
@@ -968,6 +968,7 @@ contract BeefySonic is
     /// @notice Set the Beefy fee recipient
     /// @param _beefyFeeRecipient Address of the new Beefy fee recipient
     function setBeefyFeeRecipient(address _beefyFeeRecipient) external onlyOwner {
+        _NoZeroAddress(_beefyFeeRecipient);
         BeefySonicStorage storage $ = getBeefySonicStorage();
         emit BeefyFeeRecipientSet($.beefyFeeRecipient, _beefyFeeRecipient);
         $.beefyFeeRecipient = _beefyFeeRecipient;
@@ -976,6 +977,7 @@ contract BeefySonic is
     /// @notice Set the Beefy fee configuration
     /// @param _beefyFeeConfig Address of the new Beefy fee configuration
     function setBeefyFeeConfig(address _beefyFeeConfig) external onlyOwner {
+        _NoZeroAddress(_beefyFeeConfig);
         BeefySonicStorage storage $ = getBeefySonicStorage();
         emit BeefyFeeConfigSet($.beefyFeeConfig, _beefyFeeConfig);
         $.beefyFeeConfig = _beefyFeeConfig;
@@ -984,6 +986,7 @@ contract BeefySonic is
     /// @notice Set the liquidity fee recipient
     /// @param _liquidityFeeRecipient Address of the new liquidity fee recipient    
     function setLiquidityFeeRecipient(address _liquidityFeeRecipient) external onlyOwner {
+        _NoZeroAddress(_liquidityFeeRecipient);
         BeefySonicStorage storage $ = getBeefySonicStorage();
         emit LiquidityFeeRecipientSet($.liquidityFeeRecipient, _liquidityFeeRecipient);
         $.liquidityFeeRecipient = _liquidityFeeRecipient;
@@ -1001,6 +1004,7 @@ contract BeefySonic is
     /// @notice Set the keeper
     /// @param _keeper Address of the new keeper
     function setKeeper(address _keeper) external onlyOwner {
+        _NoZeroAddress(_keeper);
         BeefySonicStorage storage $ = getBeefySonicStorage();
         $.keeper = _keeper;
         emit KeeperSet($.keeper, _keeper);
@@ -1036,6 +1040,13 @@ contract BeefySonic is
     /// @param newImplementation Address of the new implementation
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
+    /// @notice Check if an address is not zero
+    /// @param _address Address to check
+    function _NoZeroAddress(address _address) private pure returns (address) {
+        if (_address == address(0)) revert ZeroAddress();
+        return _address;
+    }
+
     /// @notice EIP 7575: Get the share token address
     /// @return shareTokenAddress Address of the share token which is this address.
     function share() external view returns (address shareTokenAddress) {
@@ -1054,7 +1065,6 @@ contract BeefySonic is
     /// @notice Receive function for receiving Native Sonic
     /// @dev we dont allow receiving Native Sonic unless from wrapper or SFC
     receive() external payable {
-        BeefySonicStorage storage $ = getBeefySonicStorage();
-        if (msg.sender != address($.want) && msg.sender != address($.stakingContract)) revert NotAuthorized();
+        if (msg.sender != address(asset()) && msg.sender != address(getBeefySonicStorage().stakingContract)) revert NotAuthorized();
     }
 }

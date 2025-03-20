@@ -3,8 +3,6 @@ pragma solidity ^0.8.28;
 
 interface IBeefySonic {
    struct BeefySonicStorage {
-        // Address of the underlying token
-        address want;
         // Address of the staking contract
         address stakingContract;
         // Address of the Beefy fee recipient
@@ -79,6 +77,7 @@ interface IBeefySonic {
    error WithdrawError();
    error WithdrawNotReady();
    error ZeroDeposit();
+   error ZeroAddress();
 
    event BeefyFeeConfigSet(address indexed oldBeefyFeeConfig, address indexed newBeefyFeeConfig);
    event BeefyFeeRecipientSet(address indexed oldBeefyFeeRecipient, address indexed newBeefyFeeRecipient);

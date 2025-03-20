@@ -35,8 +35,6 @@ interface IBeefySonic {
         mapping(address => mapping(uint256 => RedemptionRequest)) pendingRedemptions;
         // Pending requests for each owner
         mapping(address => uint256[]) pendingRequests;
-        // Open requests for each validator
-        mapping(uint256 => uint256[]) validatorOpenRequests;
         // Validator tracking
         Validator[] validators;
    }
@@ -46,7 +44,7 @@ interface IBeefySonic {
         uint256 shares;
         uint32 claimableTimestamp;
         bool emergency;
-        uint256[] requestIds;
+        uint256[] withdrawalIds;
         uint256[] validatorIds;
    }
 
@@ -93,6 +91,7 @@ interface IBeefySonic {
    event OperatorSet(address indexed owner, address indexed operator, bool approved);
    event PartialWithdrawProcessed(address indexed owner, address indexed receiver, uint256 shares, uint256 assets, uint256 requestId, uint256 validatorIndex);
    event RedeemRequest(address indexed controller, address indexed owner, uint256 requestId, address indexed caller, uint256 shares, uint32 claimableTimestamp);
+   event SlashedValidatorWithdrawn(uint256 indexed validatorId, uint256 amountRecovered, uint256 loss);
    event ValidatorAdded(uint256 validatorId, uint256 validatorIndex);
    event ValidatorBalanceUpdated(uint256 indexed validatorIndex, uint256 oldBalance, uint256 newBalance);
    event ValidatorClaimSet(uint256 indexed validatorIndex, bool claim);

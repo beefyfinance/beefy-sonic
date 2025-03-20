@@ -178,7 +178,8 @@ contract BeefySonic is
             (, uint256 receivedStake,,,,,) = ISFC($.stakingContract).getValidator(validator.id);
             
             // Validator delegated capacity is maxDelegatedRatio times the self-stake
-            uint256 delegatedCapacity = selfStake * maxDelegatedRatio / 1e18;
+            uint256 delegatedCapacity = 0; 
+            if (selfStake > 0) delegatedCapacity = selfStake * maxDelegatedRatio / 1e18;
             
             // Check if the validator has available capacity
             if (delegatedCapacity >= (receivedStake + _amount)) return i;
@@ -230,14 +231,14 @@ contract BeefySonic is
         // Get validators to withdraw from will be multiple if the amount is too large
         (uint256[] memory validatorIds, uint256[] memory amounts) = _getValidatorsToWithdraw(assets, _emergency);
 
-        // Create request IDs
-        uint256[] memory requestIds = new uint256[](validatorIds.length);
+        // Create withdrawal IDs
+        uint256[] memory withdrawalIds = new uint256[](validatorIds.length);
 
         // Undelegate assets from the validators
         for (uint256 i; i < validatorIds.length; ++i) {
             // Get the next wId, we want this to be unique for each request
             uint256 wId = $.wId;
-            requestIds[i] = wId;
+            withdrawalIds[i] = wId;
 
             // Undelegate assets from the validator
             ISFC($.stakingContract).undelegate(validatorIds[i], wId, amounts[i]);
@@ -247,7 +248,6 @@ contract BeefySonic is
             
             // Update validator delegations and stored total
             $.validators[validatorIndex].delegations -= amounts[i];
-            $.validatorOpenRequests[validatorIds[i]].push(wId);
             $.storedTotal -= amounts[i];
 
             // Increment wId
@@ -263,7 +263,7 @@ contract BeefySonic is
                 shares: _shares,
                 claimableTimestamp: claimableTimestamp,
                 emergency: _emergency,
-                requestIds: requestIds,
+                withdrawalIds: withdrawalIds,
                 validatorIds: validatorIds
             });
         
@@ -305,6 +305,7 @@ contract BeefySonic is
                     return (_validatorIds, _withdrawAmounts);
                 }
 
+                // If we dont have enough delegations from the slashed validator we just revert until we can socialize the loss
                 revert WithdrawError();
             }
         }
@@ -408,18 +409,23 @@ contract BeefySonic is
         // Check if the validator is slashed
         bool isSlashed = ISFC($.stakingContract).isSlashed(validator.id);
         if (isSlashed) {
+            // create a withdraw ID
             uint256 wId = $.wId;
-            uint256 refundRatio =  ISFC($.stakingContract).slashingRefundRatio(validator.id);
-            uint256 recoverableAmount = validator.delegations * refundRatio / 1e18;
-            if (recoverableAmount > 0) {
-                validator.slashedWId = wId;
-                validator.recoverableAmount = recoverableAmount;
-                ISFC($.stakingContract).undelegate(validator.id, wId, validator.delegations);
-                $.wId++;
+            uint256 refundRatio = ISFC($.stakingContract).slashingRefundRatio(validator.id);
+            uint256 recoverableAmount = 0;
+
+            if (refundRatio > 0) {
+                recoverableAmount = validator.delegations * refundRatio / 1e18;
+                if (recoverableAmount > 0) {
+                    ISFC($.stakingContract).undelegate(validator.id, wId, validator.delegations);
+                    $.wId++;
+                }
             }
 
             emit ValidatorSlashed(validator.id, recoverableAmount, validator.delegations);
             validator.slashedDelegations = validator.delegations;
+            validator.recoverableAmount = recoverableAmount;
+            validator.slashedWId = wId;
             validator.delegations = 0;
             validator.active = false;
         }
@@ -431,23 +437,27 @@ contract BeefySonic is
         BeefySonicStorage storage $ = getBeefySonicStorage();
         Validator storage validator = $.validators[validatorIndex];
 
-        uint256 refundRatio =  ISFC($.stakingContract).slashingRefundRatio(validator.id);
-        uint256 recoverableAmount = validator.slashedDelegations * refundRatio / 1e18;
-
+        uint256 refundRatio = ISFC($.stakingContract).slashingRefundRatio(validator.id);
+        uint256 recoverableAmount = 0;
+        if (refundRatio > 0) recoverableAmount = validator.slashedDelegations * refundRatio / 1e18;
+        
+        uint256 amountRecovered = 0;
         if (recoverableAmount > 0) {
             uint256 before = address(this).balance;
             ISFC($.stakingContract).withdraw(validator.id, validator.slashedWId);
-            uint256 amountRecovered = address(this).balance - before;
-            uint256 loss = validator.slashedDelegations - amountRecovered;
-            $.storedTotal -= loss;
-            validator.recoverableAmount = 0;
+            amountRecovered = address(this).balance - before;
 
+            // deposit the recovered amount to another validator
             uint256 depositValidatorIndex = _getValidatorToDeposit(amountRecovered);
-
             $.validators[depositValidatorIndex].delegations += amountRecovered;
-
             ISFC($.stakingContract).delegate{value: amountRecovered}($.validators[depositValidatorIndex].id);
         }
+
+        uint256 loss = validator.slashedDelegations - amountRecovered;
+        $.storedTotal -= loss;
+        validator.recoverableAmount = 0;
+
+        emit SlashedValidatorWithdrawn(validator.id, amountRecovered, loss);
     }
 
     /// @notice Process a withdrawal
@@ -522,9 +532,9 @@ contract BeefySonic is
         uint256 before = address(this).balance;
 
         // Withdraw assets from the validators
-        for (uint256 j; j < request.requestIds.length; j++) {
+        for (uint256 j; j < request.withdrawalIds.length; j++) {
             uint256 validatorId = request.validatorIds[j];
-            uint256 requestId = request.requestIds[j];
+            uint256 requestId = request.withdrawalIds[j];
 
             // Check if the validator is slashed
             bool isSlashed = ISFC($.stakingContract).isSlashed(validatorId);
@@ -541,46 +551,11 @@ contract BeefySonic is
                 // If the validator is not slashed, we can withdraw the assets
                 ISFC($.stakingContract).withdraw(validatorId, requestId);
             }
-
-            // Update validator open requests
-
-            _removeRequestFromValidator(validatorId, requestId);
         }
 
         // Calculate the amount withdrawn
         amountWithdrawn = address(this).balance - before;
     }
-
-    /// @notice Remove a request from a validator
-    /// @param _validatorId ID of the validator
-    /// @param _requestId Request ID
-    function _removeRequestFromValidator(uint256 _validatorId, uint256 _requestId) internal {
-        BeefySonicStorage storage $ = getBeefySonicStorage();       
-        uint256[] storage validatorRequests = $.validatorOpenRequests[_validatorId];
-
-        // Find the index of the request ID 
-        uint256 index = type(uint256).max; // Invalid index to start
-        for (uint256 i = 0; i < validatorRequests.length; i++) {
-            if (validatorRequests[i] == _requestId) {
-                index = i;
-                break;
-            }
-        }
-        
-        // If the request ID was not found, nothing to do
-        if (index == type(uint256).max) return;
-        
-        // If it's the last element, just pop it
-        if (index == validatorRequests.length - 1) {
-            validatorRequests.pop();
-            return;
-        }
-        
-        // Otherwise, move the last element to the position of the removed element and pop
-        validatorRequests[index] = validatorRequests[validatorRequests.length - 1];
-        validatorRequests.pop();
-    }
-
 
     /// @notice Internal withdraw function
     /// @param _caller Caller address

@@ -146,6 +146,15 @@ contract BeefySonicTest is Test {
         beefySonic.requestRedeem(1000e18, bob, alice);
         assertEq(IERC20(address(beefySonic)).balanceOf(address(alice)), 1000e18);
         vm.stopPrank();
+
+        vm.startPrank(alice);
+        beefySonic.setOperator(bob, true);
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        beefySonic.requestRedeem(1000e18, bob, alice);
+        assertEq(IERC20(address(beefySonic)).balanceOf(address(alice)), 0);
+        vm.stopPrank();
     }
 
     function test_SlashedValidatorWithdraw() public {

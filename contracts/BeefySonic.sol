@@ -653,6 +653,9 @@ contract BeefySonic is
         for (uint256 i = 0; i < $.validators.length; i++) {
             uint256 selfStake = ISFC($.stakingContract).getSelfStake($.validators[i].id);
             (, uint256 receivedStake,,,,,) = ISFC($.stakingContract).getValidator($.validators[i].id);
+
+            // Avoid division by 0
+            if (selfStake == 0) continue;
             
             // Validator delegated capacity is maxDelegatedRatio times the self-stake
             uint256 delegatedCapacity = selfStake * maxDelegatedRatio / 1e18;

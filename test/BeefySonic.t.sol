@@ -367,6 +367,9 @@ contract BeefySonicTest is Test {
 
         uint256 bal = amount - assetAmount;
 
+        vm.expectRevert(IBeefySonic.ZeroAddress.selector);
+        beefySonic.deposit(bal, address(0), user);
+
         beefySonic.deposit(bal, user, user);
         vm.stopPrank();
     }

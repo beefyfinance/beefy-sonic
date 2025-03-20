@@ -63,44 +63,44 @@ interface IBeefySonic {
         bool claim;
    }
    
-   error ZeroDeposit();
+   error ERC7540AsyncFlow();
+   error InsufficientBalance();
+   error InvalidLiquidityFee();
+   error InvalidValidatorIndex();
    error NoValidators();
    error NoValidatorsWithCapacity();
-   error InvalidValidatorIndex();
-   error InvalidLiquidityFee();
-   error NothingToWithdraw();
-   error WithdrawNotReady();
    error NotAuthorized();
-   error InsufficientBalance();
    error NotClaimableYet();
-   error ERC7540AsyncFlow();
-   error NotReadyForHarvest();
    error NotEnoughRewards();
+   error NotOK();
+   error NotReadyForHarvest();
+   error NothingToWithdraw();
    error ValidatorNotFound();
    error WithdrawError();
-   error NotOK();
+   error WithdrawNotReady();
+   error ZeroDeposit();
 
-   event Notify(address notifier, uint256 amount);
-   event ClaimedRewards(uint256 amount);
-   event WithdrawQueued(address indexed owner, address indexed receiver, uint256 shares, uint256 assets, uint256[] validatorIds, uint256[] validatorAmounts);
-   event WithdrawProcessed(address indexed owner, address indexed receiver, uint256 shares, uint256 assets);
-   event PartialWithdrawProcessed(address indexed owner, address indexed receiver, uint256 shares, uint256 assets, uint256 requestId, uint256 validatorIndex);
-   event ValidatorAdded(uint256 validatorId, uint256 validatorIndex);
-   event ValidatorBalanceUpdated(uint256 indexed validatorIndex, uint256 oldBalance, uint256 newBalance);
-   event ValidatorStatusChanged(uint256 indexed validatorIndex, bool active);
-   event ValidatorSlashed(uint256 indexed validatorId, uint256 recoverableAmount, uint256 delegations);
    event BeefyFeeConfigSet(address indexed oldBeefyFeeConfig, address indexed newBeefyFeeConfig);
    event BeefyFeeRecipientSet(address indexed oldBeefyFeeRecipient, address indexed newBeefyFeeRecipient);
+   event ChargedFees(uint256 amount, uint256 beefyFee, uint256 liquidityFee);
+   event ClaimedRewards(uint256 amount);
+   event KeeperSet(address indexed oldKeeper, address indexed newKeeper);
    event LiquidityFeeRecipientSet(address indexed oldLiquidityFeeRecipient, address indexed newLiquidityFeeRecipient);
    event LiquidityFeeSet(uint256 oldLiquidityFee, uint256 newLiquidityFee);
-   event ChargedFees(uint256 amount, uint256 beefyFee, uint256 liquidityFee);
-   event OperatorSet(address indexed owner, address indexed operator, bool approved);
    event LockDurationSet(uint256 oldLockDuration, uint256 newLockDuration);
-   event KeeperSet(address indexed oldKeeper, address indexed newKeeper);
-   event MinWithdrawSet(uint256 oldMinWithdraw, uint256 newMinWithdraw);
    event MinHarvestSet(uint256 oldMinHarvest, uint256 newMinHarvest);
-   event ValidatorClaimSet(uint256 indexed validatorIndex, bool claim);
+   event MinWithdrawSet(uint256 oldMinWithdraw, uint256 newMinWithdraw);
+   event Notify(address notifier, uint256 amount);
+   event OperatorSet(address indexed owner, address indexed operator, bool approved);
+   event PartialWithdrawProcessed(address indexed owner, address indexed receiver, uint256 shares, uint256 assets, uint256 requestId, uint256 validatorIndex);
    event RedeemRequest(address indexed controller, address indexed owner, uint256 requestId, address indexed caller, uint256 shares, uint32 claimableTimestamp);
+   event ValidatorAdded(uint256 validatorId, uint256 validatorIndex);
+   event ValidatorBalanceUpdated(uint256 indexed validatorIndex, uint256 oldBalance, uint256 newBalance);
+   event ValidatorClaimSet(uint256 indexed validatorIndex, bool claim);
+   event ValidatorSlashed(uint256 indexed validatorId, uint256 recoverableAmount, uint256 delegations);
+   event ValidatorStatusChanged(uint256 indexed validatorIndex, bool active);
+   event WithdrawProcessed(address indexed owner, address indexed receiver, uint256 shares, uint256 assets);
+   event WithdrawQueued(address indexed owner, address indexed receiver, uint256 shares, uint256 assets, uint256[] validatorIds, uint256[] validatorAmounts);
 
    /// @notice Request a redeem, interface of EIP - 7540 https://eips.ethereum.org/EIPS/eip-7540
    /// @param shares Amount of shares to redeem

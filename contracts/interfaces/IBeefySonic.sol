@@ -60,7 +60,6 @@ interface IBeefySonic {
    }
    
    error ERC7540AsyncFlow();
-   error InsufficientBalance();
    error InvalidLiquidityFee();
    error InvalidValidatorIndex();
    error NoValidators();
@@ -73,7 +72,6 @@ interface IBeefySonic {
    error NothingToWithdraw();
    error ValidatorNotFound();
    error WithdrawError();
-   error WithdrawNotReady();
    error ZeroDeposit();
    error ZeroAddress();
 
@@ -86,19 +84,15 @@ interface IBeefySonic {
    event LiquidityFeeSet(uint256 oldLiquidityFee, uint256 newLiquidityFee);
    event LockDurationSet(uint256 oldLockDuration, uint256 newLockDuration);
    event MinHarvestSet(uint256 oldMinHarvest, uint256 newMinHarvest);
-   event MinWithdrawSet(uint256 oldMinWithdraw, uint256 newMinWithdraw);
    event Notify(address notifier, uint256 amount);
    event OperatorSet(address indexed owner, address indexed operator, bool approved);
-   event PartialWithdrawProcessed(address indexed owner, address indexed receiver, uint256 shares, uint256 assets, uint256 requestId, uint256 validatorIndex);
    event RedeemRequest(address indexed controller, address indexed owner, uint256 requestId, address indexed caller, uint256 shares, uint32 claimableTimestamp);
    event SlashedValidatorWithdrawn(uint256 indexed validatorId, uint256 amountRecovered, uint256 loss);
    event ValidatorAdded(uint256 validatorId, uint256 validatorIndex);
-   event ValidatorBalanceUpdated(uint256 indexed validatorIndex, uint256 oldBalance, uint256 newBalance);
    event ValidatorClaimSet(uint256 indexed validatorIndex, bool claim);
    event ValidatorSlashed(uint256 indexed validatorId, uint256 recoverableAmount, uint256 delegations);
    event ValidatorStatusChanged(uint256 indexed validatorIndex, bool active);
    event WithdrawProcessed(address indexed owner, address indexed receiver, uint256 shares, uint256 assets);
-   event WithdrawQueued(address indexed owner, address indexed receiver, uint256 shares, uint256 assets, uint256[] validatorIds, uint256[] validatorAmounts);
 
    /// @notice Request a redeem, interface of EIP - 7540 https://eips.ethereum.org/EIPS/eip-7540
    /// @param shares Amount of shares to redeem

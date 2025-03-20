@@ -528,22 +528,22 @@ contract BeefySonicTest is Test {
         uint256 requestId = beefySonic.requestRedeem(sharesAmount - 1e18, zap, user);
         uint256 secondRequestId = beefySonic.requestRedeem(1e18, zap, user);
 {
-        uint256 pendingFirstRedeem = beefySonic.pendingRedeemRequest(requestId, user);
-        uint256 zeroClaim = beefySonic.claimableRedeemRequest(requestId, user);
+        uint256 pendingFirstRedeem = beefySonic.pendingRedeemRequest(requestId, zap);
+        uint256 zeroClaim = beefySonic.claimableRedeemRequest(requestId, zap);
         assertEq(zeroClaim, 0);
         assertEq(pendingFirstRedeem, sharesAmount - 1e18);
 
-        uint256 pendingSecondRedeem = beefySonic.pendingRedeemRequest(secondRequestId, user);
+        uint256 pendingSecondRedeem = beefySonic.pendingRedeemRequest(secondRequestId, zap);
         assertEq(pendingSecondRedeem, 1e18);
 
-        BeefySonic.RedemptionRequest[] memory requests = beefySonic.userPendingRedeemRequests(user);
+        BeefySonic.RedemptionRequest[] memory requests = beefySonic.userPendingRedeemRequests(zap);
         assertEq(requests.length, 2);
 
         bool isOperator = beefySonic.isOperator(user, zap);
         assertEq(isOperator, true);
 
         vm.expectRevert(IBeefySonic.NotClaimableYet.selector);
-        beefySonic.withdraw(requestId, zap, user);
+        beefySonic.withdraw(requestId, user, zap);
 
         // Wait for the withdrawal
         vm.warp(block.timestamp + 14 days + 1);
@@ -554,24 +554,24 @@ contract BeefySonicTest is Test {
         vm.stopPrank();
        
 {
-        vm.startPrank(user);
+        vm.startPrank(zap);
 
-        uint256 claimableRedeem = beefySonic.claimableRedeemRequest(requestId, user);
-        uint256 pendingRedeem = beefySonic.pendingRedeemRequest(requestId, user);
+        uint256 claimableRedeem = beefySonic.claimableRedeemRequest(requestId, zap);
+        uint256 pendingRedeem = beefySonic.pendingRedeemRequest(requestId, zap);
         assertEq(pendingRedeem, 0);
         assertEq(claimableRedeem, sharesAmount - 1e18);
 
-        uint256 secondClaimableRedeem = beefySonic.claimableRedeemRequest(secondRequestId, user);
+        uint256 secondClaimableRedeem = beefySonic.claimableRedeemRequest(secondRequestId, zap);
         assertEq(secondClaimableRedeem, 1e18);
 
-        uint256 shares = beefySonic.withdraw(requestId, user, user);
+        uint256 shares = beefySonic.withdraw(requestId, user, zap);
         assertEq(shares, sharesAmount - 1e18);
-        uint256 secondShares = beefySonic.withdraw(secondRequestId, user, user);
+        uint256 secondShares = beefySonic.withdraw(secondRequestId, user, zap);
         assertEq(secondShares, 1e18);
 
         assertEq(IERC20(want).balanceOf(user) - before, assetAmount + secondAssetAmount);
         vm.stopPrank();
-    }   
+    }
     }
 
     function _redeem(uint256 sharesAmount, address user) internal { 

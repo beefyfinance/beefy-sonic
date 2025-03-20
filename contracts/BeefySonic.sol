@@ -257,7 +257,7 @@ contract BeefySonic is
         uint32 claimableTimestamp = uint32(block.timestamp + withdrawDuration());
 
         // Store the request
-        $.pendingRedemptions[_owner][requestId] =
+        $.pendingRedemptions[_controller][requestId] =
             RedemptionRequest({
                 assets: assets,
                 shares: _shares,
@@ -268,7 +268,7 @@ contract BeefySonic is
             });
         
         // Add the request ID to the owner's pending requests
-        $.pendingRequests[_owner].push(requestId);
+        $.pendingRequests[_controller].push(requestId);
 
         emit RedeemRequest(_controller, _owner, requestId, msg.sender, _shares, claimableTimestamp);
         return requestId;

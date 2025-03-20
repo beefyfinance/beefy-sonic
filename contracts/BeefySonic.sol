@@ -741,12 +741,16 @@ contract BeefySonic is
     function _chargeFees(uint256 _amount) internal {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         uint256 beefyFeeAmount = _amount * IFeeConfig($.beefyFeeConfig).getFees(address(this)).total / 1e18;
-        uint256 liquidityFeeAmount = _amount * $.liquidityFee / 1e18;
+        uint256 liquidityFeeAmount = 0;
+        if ($.liquidityFee > 0) liquidityFeeAmount = _amount * $.liquidityFee / 1e18;
 
-        IWrappedNative($.want).deposit{value: liquidityFeeAmount + beefyFeeAmount}();
-        IERC20($.want).safeTransfer($.beefyFeeRecipient, beefyFeeAmount);
-        IERC20($.want).safeTransfer($.liquidityFeeRecipient, liquidityFeeAmount);
-
+        uint256 total = beefyFeeAmount + liquidityFeeAmount;
+        if (total > 0) {
+            IWrappedNative($.want).deposit{value: total}();
+            if (beefyFeeAmount > 0) IERC20($.want).safeTransfer($.beefyFeeRecipient, beefyFeeAmount);
+            if (liquidityFeeAmount > 0) IERC20($.want).safeTransfer($.liquidityFeeRecipient, liquidityFeeAmount);
+        }
+        
         emit ChargedFees(_amount, beefyFeeAmount, liquidityFeeAmount);
     }
 

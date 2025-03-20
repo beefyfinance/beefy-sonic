@@ -362,7 +362,12 @@ contract BeefySonicTest is Test {
         vm.expectRevert(IBeefySonic.ZeroDeposit.selector);
         beefySonic.deposit(0, user);
 
-        beefySonic.deposit(amount, user, user);
+        uint256 shares = beefySonic.previewDeposit(amount / 2);
+        uint256 assetAmount = beefySonic.mint(shares, user, user);
+
+        uint256 bal = amount - assetAmount;
+
+        beefySonic.deposit(bal, user, user);
         vm.stopPrank();
     }
 
@@ -465,7 +470,6 @@ contract BeefySonicTest is Test {
        vm.startPrank(zap);
 
         uint256 before = IERC20(want).balanceOf(user);
-
         uint256 assetAmount = beefySonic.convertToAssets(sharesAmount - 1e18);
         uint256 secondAssetAmount = beefySonic.convertToAssets(1e18);
         uint256 requestId = beefySonic.requestRedeem(sharesAmount - 1e18, zap, user);
@@ -481,6 +485,9 @@ contract BeefySonicTest is Test {
 
         BeefySonic.RedemptionRequest[] memory requests = beefySonic.userPendingRedeemRequests(user);
         assertEq(requests.length, 2);
+
+        bool isOperator = beefySonic.isOperator(user, zap);
+        assertEq(isOperator, true);
 
         vm.expectRevert(IBeefySonic.NotClaimableYet.selector);
         beefySonic.withdraw(requestId, zap, user);

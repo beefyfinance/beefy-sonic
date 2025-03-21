@@ -91,7 +91,7 @@ interface IBeefySonic {
    event ValidatorAdded(uint256 validatorId, uint256 validatorIndex);
    event ValidatorClaimSet(uint256 indexed validatorIndex, bool claim);
    event ValidatorSlashed(uint256 indexed validatorId, uint256 recoverableAmount, uint256 delegations);
-   event ValidatorStatusChanged(uint256 indexed validatorIndex, bool active);
+   event ValidatorStatusChanged(uint256 indexed validatorIndex, bool active, bool shouldClaim);
    event WithdrawProcessed(address indexed owner, address indexed receiver, uint256 shares, uint256 assets);
 
    /// @notice Request a redeem, interface of EIP - 7540 https://eips.ethereum.org/EIPS/eip-7540
@@ -131,7 +131,8 @@ interface IBeefySonic {
    /// @notice Set a validator's active status
    /// @param validatorIndex Index of the validator
    /// @param active Whether the validator is active
-   function setValidatorActive(uint256 validatorIndex, bool active) external;
+   /// @param shouldClaim Whether the validator should claim
+   function setValidatorStatus(uint256 validatorIndex, bool active, bool shouldClaim) external;
 
    /// @notice Set an operator to finalize the claim of the request to withdraw
    /// @param operator Address of the operator

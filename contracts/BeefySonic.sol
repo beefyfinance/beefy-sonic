@@ -532,11 +532,7 @@ contract BeefySonic is
             uint256 validatorId = request.validatorIds[j];
             uint256 requestId = request.withdrawalIds[j];
 
-            // Check if the validator is slashed
-            uint256 index = _getValidatorIndex(validatorId);
             if (isSlashed(validatorId)) {
-                // update validator to not active find index
-                _setValidatorStatus(index, false, true);
                 // If the validator is slashed, we need to make sure we get the refund if more than 0
                 uint256 refundAmount = slashingRefundRatio(validatorId);
                 if (refundAmount > 0) {

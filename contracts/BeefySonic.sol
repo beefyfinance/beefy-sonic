@@ -230,15 +230,16 @@ contract BeefySonic is
 
         // Undelegate assets from the validators
         for (uint256 i; i < validatorIds.length; ++i) {
+            uint256 validatorId = validatorIds[i];
             // Get the next wId, we want this to be unique for each request
             uint256 wId = $.wId;
             withdrawalIds[i] = wId;
 
             // Undelegate assets from the validator
-            ISFC($.stakingContract).undelegate(validatorIds[i], wId, amounts[i]);
+            ISFC($.stakingContract).undelegate(validatorId, wId, amounts[i]);
 
             // Get the validator index by ID before updating
-            uint256 validatorIndex = _getValidatorIndex(validatorIds[i]);
+            uint256 validatorIndex = _getValidatorIndex(validatorId);
             
             // Update validator delegations and stored total
             $.validators[validatorIndex].delegations -= amounts[i];
@@ -284,15 +285,17 @@ contract BeefySonic is
         /// Loop and look to see if any validator is slashed, if they are and have enough delegations we allow a request to process in emergency mode
         for (uint256 i; i < $.validators.length; i++) {
             Validator storage validator = $.validators[i];
-            if (isSlashed(validator.id)) {
-                if (validator.delegations == 0) continue;
+            uint256 validatorId = validator.id;
+            uint256 delegations = validator.delegations;
+            if (isSlashed(validatorId)) {
+                if (delegations == 0) continue;
                 // brick redeem requests unless via emergency
                 if (!_emergency) revert WithdrawError();
 
-                if (remaining <= validator.delegations) {
+                if (remaining <= delegations) {
                     _validatorIds = new uint256[](1);
                     _withdrawAmounts = new uint256[](1);
-                    _validatorIds[0] = validator.id;
+                    _validatorIds[0] = validatorId;
                     _withdrawAmounts[0] = remaining;
                     return (_validatorIds, _withdrawAmounts);
                 }
@@ -305,16 +308,18 @@ contract BeefySonic is
         // loop backwards in the validators array withdraw from newest validator first
         for (uint256 j = $.validators.length; j > 0; j--) {
             Validator storage validator = $.validators[j-1];
+            uint256 validatorId = validator.id;
+            uint256 delegations = validator.delegations;
 
-            if (validator.delegations == 0) continue;
+            if (delegations == 0) continue;
 
-            if (remaining > validator.delegations) {
-                validatorIds[currentIndex] = validator.id;
-                withdrawAmounts[currentIndex] = validator.delegations;
-                remaining -= validator.delegations;
+            if (remaining > delegations) {
+                validatorIds[currentIndex] = validatorId;
+                withdrawAmounts[currentIndex] = delegations;
+                remaining -= delegations;
                 currentIndex++;
             } else {
-                validatorIds[currentIndex] = validator.id;
+                validatorIds[currentIndex] = validatorId;
                 withdrawAmounts[currentIndex] = remaining;
                 remaining = 0;
                 currentIndex++;
@@ -387,25 +392,27 @@ contract BeefySonic is
     function checkForSlashedValidatorsAndUndelegate(uint256 validatorIndex) external onlyOwner {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         Validator storage validator = $.validators[validatorIndex];
+        uint256 validatorId = validator.id;
+        uint256 delegations = validator.delegations;
 
         // Check if the validator is slashed
-        bool _isSlashed = isSlashed(validator.id);
+        bool _isSlashed = isSlashed(validatorId);
         if (_isSlashed) {
             // create a withdraw ID
             uint256 wId = $.wId;
-            uint256 refundRatio = slashingRefundRatio(validator.id);
+            uint256 refundRatio = slashingRefundRatio(validatorId);
             uint256 recoverableAmount = 0;
 
             if (refundRatio > 0) {
-                recoverableAmount = validator.delegations * refundRatio / 1e18;
+                recoverableAmount = delegations * refundRatio / 1e18;
                 if (recoverableAmount > 0) {
-                    ISFC($.stakingContract).undelegate(validator.id, wId, validator.delegations);
+                    ISFC($.stakingContract).undelegate(validatorId, wId, delegations);
                     $.wId++;
                 }
             }
 
-            emit ValidatorSlashed(validator.id, recoverableAmount, validator.delegations);
-            validator.slashedDelegations = validator.delegations;
+            emit ValidatorSlashed(validatorId, recoverableAmount, delegations);
+            validator.slashedDelegations = delegations;
             validator.recoverableAmount = recoverableAmount;
             validator.slashedWId = wId;
             validator.delegations = 0;

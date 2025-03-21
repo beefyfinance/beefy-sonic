@@ -59,7 +59,7 @@ contract BeefySonic is
     ) public initializer {
         __UUPSUpgradeable_init_unchained();
         __ERC20_init_unchained(_name, _symbol);
-        __ERC20Permit_init_unchained(_name);
+        __ERC20Permit_init(_name);
         __ERC4626_init_unchained(IERC20(_want));
         __Ownable_init_unchained(msg.sender);
         __Pausable_init_unchained();
@@ -168,7 +168,7 @@ contract BeefySonic is
             // Check if the validator is ok
             (bool isOk,) = _validatorStatus(validator.id);
             if (!isOk) {
-                _setValidatorStatus(i, false, false);
+                _setValidatorStatus(i, false, true);
 
                 continue;
             }
@@ -284,9 +284,7 @@ contract BeefySonic is
         /// Loop and look to see if any validator is slashed, if they are and have enough delegations we allow a request to process in emergency mode
         for (uint256 i; i < $.validators.length; i++) {
             Validator storage validator = $.validators[i];
-            bool _isSlashed = isSlashed(validator.id);
-
-            if (_isSlashed) {
+            if (isSlashed(validator.id)) {
                 if (validator.delegations == 0) continue;
                 // brick redeem requests unless via emergency
                 if (!_emergency) revert WithdrawError();
@@ -528,11 +526,10 @@ contract BeefySonic is
             uint256 requestId = request.withdrawalIds[j];
 
             // Check if the validator is slashed
-            bool _isSlashed = isSlashed(validatorId);
             uint256 index = _getValidatorIndex(validatorId);
-            if (_isSlashed) {
+            if (isSlashed(validatorId)) {
                 // update validator to not active find index
-                _setValidatorStatus(index, false, false);
+                _setValidatorStatus(index, false, true);
                 // If the validator is slashed, we need to make sure we get the refund if more than 0
                 uint256 refundAmount = slashingRefundRatio(validatorId);
                 if (refundAmount > 0) {
@@ -751,12 +748,13 @@ contract BeefySonic is
 
     /// @notice Remaining locked profit after a notification
     /// @return locked Amount remaining to be vested
-    function lockedProfit() public view returns (uint256 locked) {
+    function lockedProfit() public view returns (uint256 locked) {  
         BeefySonicStorage storage $ = getBeefySonicStorage();
-        if ($.lockDuration == 0) return 0;
+        uint256 _lockDuration = $.lockDuration;
+        if (_lockDuration == 0) return 0;
         uint256 elapsed = block.timestamp - $.lastHarvest;
-        uint256 remaining = elapsed < $.lockDuration ? $.lockDuration - elapsed : 0;
-        locked = $.totalLocked * remaining / $.lockDuration;
+        uint256 remaining = elapsed < _lockDuration ? _lockDuration - elapsed : 0;
+        locked = $.totalLocked * remaining / _lockDuration;
     }
 
     /// @notice Get the slashing refund ratio of a validator

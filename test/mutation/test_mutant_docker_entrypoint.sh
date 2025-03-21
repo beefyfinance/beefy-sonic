@@ -14,4 +14,4 @@ else
 fi
 
 # Run the test with any additional arguments
-exec forge test --root /app "$@"
+exec forge test --root /app --fail-fast "$@"

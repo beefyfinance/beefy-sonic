@@ -207,11 +207,11 @@ print_stats() {
 
 test_baseline() {
     echo "Running baseline tests outside docker..."
-    forge test
+    forge test --fail-fast
 
     build_runner_docker_image
     echo "Running baseline tests in docker..."
-    docker run --rm -v "$PROJECT_ROOT:/mutant:ro" --entrypoint /bin/bash "$DOCKER_IMAGE" -c "forge test"
+    docker run --rm -v "$PROJECT_ROOT:/mutant:ro" --entrypoint /bin/bash "$DOCKER_IMAGE" -c "forge test --fail-fast"
 }
 
 help() {

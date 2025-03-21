@@ -90,7 +90,7 @@ contract BeefySonic is
     /// @param _assets Amount of assets to deposit
     /// @param _receiver Address of the receiver
     /// @param _controller Controller address
-    function deposit(uint256 _assets, address _receiver, address _controller) external returns (uint256) {
+    function deposit(uint256 _assets, address _receiver, address _controller) external whenNotPaused returns (uint256) {
         _onlyOperatorOrController(_controller);
 
         uint256 maxAssets = maxDeposit(_receiver);
@@ -106,7 +106,7 @@ contract BeefySonic is
     /// @param _shares Amount of shares to mint
     /// @param _receiver Address of the receiver
     /// @param _controller Controller address
-    function mint(uint256 _shares, address _receiver, address _controller) external returns (uint256) {
+    function mint(uint256 _shares, address _receiver, address _controller) external whenNotPaused returns (uint256) {
         _onlyOperatorOrController(_controller);
 
         uint256 maxShares = maxMint(_receiver);

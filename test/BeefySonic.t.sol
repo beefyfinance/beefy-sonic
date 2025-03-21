@@ -8,7 +8,8 @@ import {ISFC} from "../contracts/interfaces/ISFC.sol";
 import {IConstantsManager} from "../contracts/interfaces/IConstantsManager.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 contract BeefySonicTest is Test {
     BeefySonic public beefySonic;
     BeefySonic public implementation;
@@ -374,7 +375,80 @@ contract BeefySonicTest is Test {
         assertEq(beefySonic.supportsInterface(0x620ee8e4), true);
         assertEq(beefySonic.supportsInterface(0x2f0a18c5), true);
         assertEq(beefySonic.supportsInterface(0xe3bc4e65), true);
+        assertEq(beefySonic.supportsInterface(0x01ffc9a7), true);
 
+        vm.stopPrank();
+    }
+
+    function test_RevertNonOwnerSetters() public {
+        // Create a non-owner user
+        address nonOwner = makeAddr("nonOwner");
+        
+        vm.startPrank(nonOwner);
+
+        bytes memory encodedError = abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, nonOwner);
+        
+        // Test all setter functions revert for non-owner
+        vm.expectRevert(encodedError);
+        beefySonic.setBeefyFeeRecipient(address(1));
+        
+        vm.expectRevert(encodedError);
+        beefySonic.setBeefyFeeConfig(address(1));
+        
+        vm.expectRevert(encodedError);
+        beefySonic.setLiquidityFeeRecipient(address(1));
+        
+        vm.expectRevert(encodedError);
+        beefySonic.setLiquidityFee(0.05e18);
+        
+        vm.expectRevert(encodedError);
+        beefySonic.setKeeper(address(1));
+        
+        vm.expectRevert(encodedError);
+        beefySonic.setLockDuration(2 days);
+        
+        vm.expectRevert(encodedError);
+        beefySonic.setMinHarvest(2e18);
+        
+        vm.expectRevert(encodedError);
+        beefySonic.addValidator(2);
+        
+        vm.expectRevert(encodedError);
+        beefySonic.setValidatorActive(0, false);
+        
+        vm.expectRevert(encodedError);
+        beefySonic.setValidatorClaim(0, false);
+        
+        vm.expectRevert(encodedError);
+        beefySonic.unpause();
+        
+        vm.stopPrank();
+    }
+    
+    function test_RevertWhenPaused() public {
+        // Setup initial state
+        address user = makeAddr("user");
+        vm.deal(user, 100 ether);
+        
+        // First pause the contract as owner
+        beefySonic.pause();
+        
+        vm.startPrank(user);
+        
+        bytes memory encodedError = abi.encodeWithSelector(PausableUpgradeable.EnforcedPause.selector);
+
+        // Test deposit reverts when paused
+        vm.expectRevert(encodedError);
+        beefySonic.deposit(1 ether, user, user);
+        
+        // Test mint reverts when paused
+        vm.expectRevert(encodedError);
+        beefySonic.mint(1 ether, user, user);
+        
+        // Test harvest reverts when paused
+        vm.expectRevert(encodedError);
+        beefySonic.harvest();
+        
         vm.stopPrank();
     }
 

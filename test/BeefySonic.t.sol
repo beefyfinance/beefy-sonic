@@ -377,6 +377,7 @@ contract BeefySonicTest is Test {
         assertEq(beefySonic.supportsInterface(0x2f0a18c5), true);
         assertEq(beefySonic.supportsInterface(0xe3bc4e65), true);
         assertEq(beefySonic.supportsInterface(0x01ffc9a7), true);
+        assertEq(beefySonic.supportsInterface(0x00000000), false);
 
         vm.stopPrank();
     }
@@ -518,6 +519,27 @@ contract BeefySonicTest is Test {
         // Should succeed now
         beefySonic.harvest();
         vm.stopPrank();
+    }
+
+    function test_receive() public {
+        // Test positive case: receiving from asset (wrapped native)
+        vm.deal(want, 1 ether);
+        vm.prank(want);
+        (bool success,) = address(beefySonic).call{value: 1 ether}("");
+        assertTrue(success);
+
+        // Test positive case: receiving from staking contract
+        vm.deal(stakingContract, 1 ether);
+        vm.prank(stakingContract);
+        (success,) = address(beefySonic).call{value: 1 ether}("");
+        assertTrue(success);
+
+        // Test negative case: receiving from unauthorized address
+        address unauthorized = makeAddr("unauthorized");
+        vm.deal(unauthorized, 1 ether);
+        vm.prank(unauthorized);
+        vm.expectRevert(IBeefySonic.NotAuthorized.selector);
+        (success,) = address(beefySonic).call{value: 1 ether}("");
     }
 
     function _deposit(uint256 amount, string memory _name) internal returns (address user) {

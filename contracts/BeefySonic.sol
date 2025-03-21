@@ -65,6 +65,7 @@ contract BeefySonic is
         __Pausable_init_unchained();
 
         // Limit the liquidity fee to 10%
+        if (_want == address(0)) revert ZeroAddress();
         if (_liquidityFee > 0.1e18) revert InvalidLiquidityFee();
 
         BeefySonicStorage storage $ = getBeefySonicStorage();

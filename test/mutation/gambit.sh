@@ -205,6 +205,15 @@ print_stats() {
     echo "  Killed:    $killed_mutants ($kill_rate_percentage%)"
 }
 
+test_baseline() {
+    echo "Running baseline tests outside docker..."
+    forge test
+
+    build_runner_docker_image
+    echo "Running baseline tests in docker..."
+    docker run --rm -v "$PROJECT_ROOT:/mutant:ro" --entrypoint /bin/bash "$DOCKER_IMAGE" -c "forge test"
+}
+
 help() {
     echo ""
     echo "Usage: $0 <command>"
@@ -214,12 +223,13 @@ help() {
     echo "  $0 survivors"
     echo "  $0 diff"
     echo "  $0 clear_results"
-    echo ""
+    echo "  $0 baseline"
     echo "Commands:"
     echo "  generate: Generate mutants"
     echo "  test: Run tests on surviving mutants (default $DEFAULT_PARALLEL_JOBS jobs)"
     echo ""
     echo "Helpers:"
+    echo "  baseline: Run baseline tests (no mutants)"
     echo "  build: Build the Docker image"
     echo "  clear_results: Clear results to re-run tests"
     echo "  diff: Diff surviving mutants to find out gaps in the test suite"
@@ -233,6 +243,9 @@ case $1 in
         ;;
     "build")
         build_runner_docker_image
+        ;;
+    "baseline")
+        test_baseline
         ;;
     "test")
         execute_mutant_tests_parallel "$2"

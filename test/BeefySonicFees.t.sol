@@ -13,19 +13,19 @@ import {IFeeConfig} from "../contracts/interfaces/IFeeConfig.sol";
 /**
  * @title BeefySonicFeesTest
  * @dev Test suite for BeefySonic's fee calculation and distribution functionality
- * 
+ *
  * This contract tests the fee-related mechanisms in BeefySonic, including:
  * - Fee calculation accuracy for both Beefy and liquidity fees
  * - Fee distribution to configured recipients
  * - Fee configuration changes and their effects
  * - Multiple harvest cycles and cumulative fee distribution
- * 
+ *
  * Key scenarios covered:
  * 1. Basic fee calculation and distribution after harvests
  * 2. Fee recipient and rate changes
  * 3. Invalid fee configuration handling
  * 4. Multiple harvest cycles with compounding rewards
- * 
+ *
  * The tests verify both the Beefy protocol fees and liquidity provider fees
  * are correctly calculated and distributed to their respective recipients.
  */
@@ -66,105 +66,105 @@ contract BeefySonicFeesTest is Test {
 
     function test_FeeCalculationAndDistribution() public {
         // 1. Initial setup with deposits
-        address alice = _deposit(1000e18, "alice");
-        
+        _deposit(1000e18, "alice");
+
         // 2. Generate rewards through epochs
         _advanceEpoch(2);
-        
+
         // 3. Harvest and verify fee distribution
         uint256 beforeBeefyBalance = IERC20(want).balanceOf(beefyFeeRecipient);
         uint256 beforeLiquidityBalance = IERC20(want).balanceOf(liquidityFeeRecipient);
-        
+
         beefySonic.harvest();
-        
+
         uint256 afterBeefyBalance = IERC20(want).balanceOf(beefyFeeRecipient);
         uint256 afterLiquidityBalance = IERC20(want).balanceOf(liquidityFeeRecipient);
-        
+
         assertTrue(afterBeefyBalance > beforeBeefyBalance, "No Beefy fees distributed");
         assertTrue(afterLiquidityBalance > beforeLiquidityBalance, "No liquidity fees distributed");
     }
 
     function test_FeeConfigurationChanges() public {
         // 1. Initial setup
-        address alice = _deposit(1000e18, "alice");
-        
+        _deposit(1000e18, "alice");
+
         // 2. Change fee configuration
         address newBeefyFeeRecipient = makeAddr("newBeefyFeeRecipient");
         address newLiquidityFeeRecipient = makeAddr("newLiquidityFeeRecipient");
         uint256 newLiquidityFee = 0.05e18;
-        
+
         vm.startPrank(beefySonic.owner());
         beefySonic.setBeefyFeeRecipient(newBeefyFeeRecipient);
         beefySonic.setLiquidityFeeRecipient(newLiquidityFeeRecipient);
         beefySonic.setLiquidityFee(newLiquidityFee);
         vm.stopPrank();
-        
+
         // 3. Generate rewards
         _advanceEpoch(2);
-        
+
         // 4. Verify fees go to new recipients
         uint256 beforeNewBeefyBalance = IERC20(want).balanceOf(newBeefyFeeRecipient);
         uint256 beforeNewLiquidityBalance = IERC20(want).balanceOf(newLiquidityFeeRecipient);
-        
+
         beefySonic.harvest();
-        
+
         uint256 afterNewBeefyBalance = IERC20(want).balanceOf(newBeefyFeeRecipient);
         uint256 afterNewLiquidityBalance = IERC20(want).balanceOf(newLiquidityFeeRecipient);
-        
+
         assertTrue(afterNewBeefyBalance > beforeNewBeefyBalance, "No fees to new Beefy recipient");
         assertTrue(afterNewLiquidityBalance > beforeNewLiquidityBalance, "No fees to new liquidity recipient");
     }
 
     function test_InvalidFeeConfiguration() public {
         vm.startPrank(beefySonic.owner());
-        
+
         // Test invalid liquidity fee (> 10%)
         vm.expectRevert(IBeefySonic.InvalidLiquidityFee.selector);
         beefySonic.setLiquidityFee(0.11e18);
-        
+
         // Test zero address recipients
         vm.expectRevert(IBeefySonic.ZeroAddress.selector);
         beefySonic.setBeefyFeeRecipient(address(0));
-        
+
         vm.expectRevert(IBeefySonic.ZeroAddress.selector);
         beefySonic.setLiquidityFeeRecipient(address(0));
-        
+
         vm.stopPrank();
     }
 
     function test_FeeDistributionWithMultipleHarvests() public {
         // 1. Initial setup
-        address alice = _deposit(1000e18, "alice");
-        
+        _deposit(1000e18, "alice");
+
         // 2. First harvest cycle
         _advanceEpoch(2);
         uint256 firstHarvestBeefyBalance = IERC20(want).balanceOf(beefyFeeRecipient);
         uint256 firstHarvestLiquidityBalance = IERC20(want).balanceOf(liquidityFeeRecipient);
-        
+
         beefySonic.harvest();
-        
+
         uint256 afterFirstHarvestBeefyBalance = IERC20(want).balanceOf(beefyFeeRecipient);
         uint256 afterFirstHarvestLiquidityBalance = IERC20(want).balanceOf(liquidityFeeRecipient);
-        
+
         // 3. Second harvest cycle
         vm.warp(block.timestamp + 1 days + 1);
         _advanceEpoch(2);
-        
+
         beefySonic.harvest();
-        
+
         uint256 afterSecondHarvestBeefyBalance = IERC20(want).balanceOf(beefyFeeRecipient);
         uint256 afterSecondHarvestLiquidityBalance = IERC20(want).balanceOf(liquidityFeeRecipient);
-        
+
         // Verify cumulative fee distribution
         assertTrue(
-            afterSecondHarvestBeefyBalance - firstHarvestBeefyBalance > 
-            afterFirstHarvestBeefyBalance - firstHarvestBeefyBalance,
+            afterSecondHarvestBeefyBalance - firstHarvestBeefyBalance
+                > afterFirstHarvestBeefyBalance - firstHarvestBeefyBalance,
             "Second harvest Beefy fees not greater than first"
         );
-        
+
         assertTrue(
-            afterSecondHarvestLiquidityBalance - firstHarvestLiquidityBalance > 
-            afterFirstHarvestLiquidityBalance - firstHarvestLiquidityBalance,
+            afterSecondHarvestLiquidityBalance - firstHarvestLiquidityBalance
+                > afterFirstHarvestLiquidityBalance - firstHarvestLiquidityBalance,
             "Second harvest liquidity fees not greater than first"
         );
     }
@@ -188,8 +188,8 @@ contract BeefySonicFeesTest is Test {
             uint256[] memory empty = new uint256[](validators.length);
             uint256[] memory txsFees = new uint256[](validators.length);
             uint256[] memory uptimes = new uint256[](validators.length);
-            
-            for (uint j = 0; j < validators.length; j++) {
+
+            for (uint256 j = 0; j < validators.length; j++) {
                 txsFees[j] = 1 ether;
                 uptimes[j] = 1 days;
             }
@@ -197,11 +197,11 @@ contract BeefySonicFeesTest is Test {
             ISFC(stakingContract).sealEpoch(empty, empty, uptimes, txsFees);
             ISFC(stakingContract).sealEpochValidators(validators);
             vm.stopPrank();
-        }   
+        }
     }
 
     function _proxy(address _implementation) internal returns (address) {
         bytes memory _empty = "";
         return address(new ERC1967Proxy(address(_implementation), _empty));
     }
-} 
+}

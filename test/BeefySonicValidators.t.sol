@@ -12,20 +12,20 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /**
  * @title BeefySonicValidatorsTest
  * @dev Test suite for BeefySonic's validator management functionality
- * 
+ *
  * This contract tests the validator lifecycle and status management in BeefySonic, including:
  * - Validator addition, deactivation, and reactivation flows
  * - Capacity management and deposit distribution
  * - Offline validator handling and failover mechanisms
  * - Multi-validator operations and interactions
- * 
+ *
  * Key scenarios covered:
  * 1. Complete validator lifecycle (addition → active → offline → reactivation)
  * 2. Capacity limits and overflow handling
  * 3. Offline validator detection and response
  * 4. Multiple validator coordination and load balancing
  * 5. Validator claims and rewards management
- * 
+ *
  * The tests ensure proper validator state transitions and maintain
  * system stability during various operational scenarios.
  */
@@ -149,7 +149,7 @@ contract BeefySonicValidatorsTest is Test {
         vm.stopPrank();
 
         _deposit(1000e18, "bob");
-        
+
         IBeefySonic.Validator memory secondValidator = beefySonic.validatorByIndex(1);
         assertTrue(secondValidator.delegations > 0, "No delegations to second validator");
     }
@@ -184,7 +184,7 @@ contract BeefySonicValidatorsTest is Test {
 
         // Verify distribution
         uint256 totalDelegations = 0;
-        for(uint256 i = 0; i < validatorCount; i++) {
+        for (uint256 i = 0; i < validatorCount; i++) {
             IBeefySonic.Validator memory validator = beefySonic.validatorByIndex(i);
             totalDelegations += validator.delegations;
         }
@@ -241,8 +241,8 @@ contract BeefySonicValidatorsTest is Test {
             uint256[] memory empty = new uint256[](validators.length);
             uint256[] memory txsFees = new uint256[](validators.length);
             uint256[] memory uptimes = new uint256[](validators.length);
-            
-            for (uint j = 0; j < validators.length; j++) {
+
+            for (uint256 j = 0; j < validators.length; j++) {
                 txsFees[j] = 1 ether;
                 uptimes[j] = 1 days;
             }
@@ -250,11 +250,11 @@ contract BeefySonicValidatorsTest is Test {
             ISFC(stakingContract).sealEpoch(empty, empty, uptimes, txsFees);
             ISFC(stakingContract).sealEpochValidators(validators);
             vm.stopPrank();
-        }   
+        }
     }
 
     function _proxy(address _implementation) internal returns (address) {
         bytes memory _empty = "";
         return address(new ERC1967Proxy(address(_implementation), _empty));
     }
-} 
+}

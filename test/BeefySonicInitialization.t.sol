@@ -13,20 +13,20 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 /**
  * @title BeefySonicInitializationTest
  * @dev Test suite for BeefySonic's initialization and storage safety
- * 
+ *
  * This contract verifies the secure initialization of BeefySonic, focusing on:
  * - Proper storage variable initialization
  * - Protection against double initialization
  * - Implementation contract security
  * - Ownership and access control setup
- * 
+ *
  * Key scenarios covered:
  * 1. Storage slot verification pre and post initialization
  * 2. Invalid parameter handling during initialization
  * 3. Implementation contract initialization blocking
  * 4. Ownership transfer and access control
  * 5. Upgradeability safety checks
- * 
+ *
  * The tests ensure the contract is correctly initialized and maintains
  * its security properties through the initialization process and upgrades.
  */
@@ -50,7 +50,7 @@ contract BeefySonicInitializationTest is Test {
 
     function test_ProperInitialization() public {
         beefySonic = BeefySonic(payable(address(_proxy(address(implementation)))));
-        
+
         beefySonic.initialize(
             want,
             stakingContract,
@@ -71,7 +71,7 @@ contract BeefySonicInitializationTest is Test {
         assertEq(beefySonic.keeper(), keeper);
         assertEq(beefySonic.beefyFeeConfig(), beefyFeeConfig);
         assertEq(beefySonic.liquidityFee(), liquidityFee);
-        
+
         (address _beefyFeeRecipient, address _liquidityFeeRecipient) = beefySonic.feeRecipients();
         assertEq(_beefyFeeRecipient, beefyFeeRecipient);
         assertEq(_liquidityFeeRecipient, liquidityFeeRecipient);
@@ -79,7 +79,7 @@ contract BeefySonicInitializationTest is Test {
 
     function test_PreventDoubleInitialization() public {
         beefySonic = BeefySonic(payable(address(_proxy(address(implementation)))));
-        
+
         beefySonic.initialize(
             want,
             stakingContract,
@@ -170,12 +170,12 @@ contract BeefySonicInitializationTest is Test {
 
     function test_InitialStorageSlots() public {
         beefySonic = BeefySonic(payable(address(_proxy(address(implementation)))));
-        
+
         // Check initial values before initialization
         assertEq(beefySonic.totalSupply(), 0);
         assertEq(beefySonic.totalAssets(), 0);
         assertEq(beefySonic.validatorsLength(), 0);
-        
+
         // Initialize contract
         beefySonic.initialize(
             want,
@@ -188,7 +188,7 @@ contract BeefySonicInitializationTest is Test {
             name,
             symbol
         );
-        
+
         // Verify initial state after initialization
         assertEq(beefySonic.totalSupply(), 0);
         assertEq(beefySonic.totalAssets(), 0);
@@ -198,7 +198,7 @@ contract BeefySonicInitializationTest is Test {
 
     function test_OwnershipAfterInitialization() public {
         beefySonic = BeefySonic(payable(address(_proxy(address(implementation)))));
-        
+
         beefySonic.initialize(
             want,
             stakingContract,
@@ -217,22 +217,22 @@ contract BeefySonicInitializationTest is Test {
         // Test ownership restrictions
         address nonOwner = makeAddr("nonOwner");
         vm.startPrank(nonOwner);
-        
+
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, nonOwner));
         beefySonic.setBeefyFeeRecipient(nonOwner);
-        
+
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, nonOwner));
         beefySonic.setLiquidityFeeRecipient(nonOwner);
-        
+
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, nonOwner));
         beefySonic.setLiquidityFee(0.05e18);
-        
+
         vm.stopPrank();
     }
 
     function test_UpgradeabilityAfterInitialization() public {
         beefySonic = BeefySonic(payable(address(_proxy(address(implementation)))));
-        
+
         beefySonic.initialize(
             want,
             stakingContract,
@@ -257,7 +257,7 @@ contract BeefySonicInitializationTest is Test {
 
         // Upgrade as owner
         beefySonic.upgradeToAndCall(address(newImplementation), new bytes(0));
-        
+
         // Verify state is preserved
         assertEq(beefySonic.asset(), want);
         assertEq(beefySonic.name(), name);
@@ -268,4 +268,4 @@ contract BeefySonicInitializationTest is Test {
         bytes memory _empty = "";
         return address(new ERC1967Proxy(address(_implementation), _empty));
     }
-} 
+}

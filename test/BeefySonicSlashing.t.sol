@@ -12,20 +12,20 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /**
  * @title BeefySonicSlashingTest
  * @dev Test suite for BeefySonic's slashing recovery mechanisms
- * 
+ *
  * This contract tests the slashing recovery functionality in BeefySonic, including:
  * - Partial and complete slashing scenarios
  * - Recovery fund calculation and distribution
  * - Emergency withdrawal procedures
  * - Multi-validator slashing events
- * 
+ *
  * Key scenarios covered:
  * 1. Partial slashing with various refund ratios
  * 2. Complete slashing with zero refund
  * 3. Recovery fund redistribution to active validators
  * 4. Emergency withdrawals after slashing
  * 5. Multiple validator slashing coordination
- * 
+ *
  * The tests utilize the Sonic fork and simulate slashing events
  * through the SFC contract to verify proper handling and accounting.
  */
@@ -43,6 +43,10 @@ contract BeefySonicSlashingTest is Test {
     string public symbol = "beS";
     uint256 public beefyValidatorId = 31;
     uint256 public secondValidatorId = 14;
+
+    uint256 internal constant DOUBLESIGN_BIT = 1 << 7;
+    uint256 internal constant CHEATER_MASK = DOUBLESIGN_BIT;
+    uint256 internal constant SLASHED_STATUS = 1 << 7;
 
     function setUp() public {
         vm.createSelectFork({urlOrAlias: "sonic", blockNumber: 13732080});
@@ -68,27 +72,27 @@ contract BeefySonicSlashingTest is Test {
     function test_SlashingRecoveryWithPartialRefund() public {
         // 1. Initial deposit and setup
         address alice = _deposit(1000e18, "alice");
-        
+
         // 2. Request redemption for half the amount
         vm.startPrank(alice);
         uint256 requestId = beefySonic.requestRedeem(500e18, alice, alice);
         vm.stopPrank();
-        
+
         // 3. Simulate validator being slashed with 70% refund ratio
         _simulateSlashing(beefyValidatorId, 0.7e18);
-        
+
         // 4. Try normal withdrawal - should revert
         vm.startPrank(alice);
         vm.expectRevert(IBeefySonic.WithdrawError.selector);
         beefySonic.withdraw(requestId, alice, alice);
         vm.stopPrank();
-        
+
         // 5. Process emergency withdrawal
         vm.startPrank(alice);
         uint256 beforeBalance = IERC20(want).balanceOf(alice);
         beefySonic.emergencyWithdraw(requestId, alice, alice);
         uint256 afterBalance = IERC20(want).balanceOf(alice);
-        
+
         // Should receive ~70% of requested amount
         assertApproxEqRel(afterBalance - beforeBalance, (500e18 * 0.7e18) / 1e18, 0.01e18);
         vm.stopPrank();
@@ -97,15 +101,15 @@ contract BeefySonicSlashingTest is Test {
     function test_SlashingRecoveryWithZeroRefund() public {
         // 1. Initial deposit
         address alice = _deposit(1000e18, "alice");
-        
+
         // 2. Request redemption
         vm.startPrank(alice);
         uint256 requestId = beefySonic.requestRedeem(500e18, alice, alice);
         vm.stopPrank();
-        
+
         // 3. Simulate validator being slashed with 0% refund
         _simulateSlashing(beefyValidatorId, 0);
-        
+
         // 4. Emergency withdrawal should revert due to no recoverable amount
         vm.startPrank(alice);
         vm.expectRevert();
@@ -121,22 +125,22 @@ contract BeefySonicSlashingTest is Test {
 
         // 2. Initial deposits
         _deposit(1000e18, "alice");
-        
+
         // 3. Slash first validator
         _simulateSlashing(beefyValidatorId, 0.7e18);
-        
+
         // 4. Process slashing recovery
         vm.startPrank(beefySonic.owner());
         beefySonic.checkForSlashedValidatorsAndUndelegate(0);
-        
+
         // Advance time for withdrawal period
         vm.warp(block.timestamp + 14 days + 1);
         _advanceEpoch(4);
-        
+
         // Complete slashed validator withdrawal
         beefySonic.completeSlashedValidatorWithdraw(0);
         vm.stopPrank();
-        
+
         // 5. Verify redistribution to second validator
         IBeefySonic.Validator memory validator = beefySonic.validatorByIndex(1);
         assertTrue(validator.delegations > 0, "Funds not redistributed to second validator");
@@ -151,23 +155,23 @@ contract BeefySonicSlashingTest is Test {
 
         // Initial deposits
         _deposit(3000e18, "alice");
-        
+
         // Slash validators with different refund ratios
         _simulateSlashing(beefyValidatorId, 0.7e18);
         _simulateSlashing(secondValidatorId, 0.5e18);
-        
+
         // Process recovery for each validator
         vm.startPrank(beefySonic.owner());
         beefySonic.checkForSlashedValidatorsAndUndelegate(0);
         beefySonic.checkForSlashedValidatorsAndUndelegate(1);
-        
+
         vm.warp(block.timestamp + 14 days + 1);
         _advanceEpoch(4);
-        
+
         beefySonic.completeSlashedValidatorWithdraw(0);
         beefySonic.completeSlashedValidatorWithdraw(1);
         vm.stopPrank();
-        
+
         // Verify final state
         IBeefySonic.Validator memory lastValidator = beefySonic.validatorByIndex(2);
         assertTrue(lastValidator.active, "Last validator should remain active");
@@ -187,10 +191,11 @@ contract BeefySonicSlashingTest is Test {
     function _simulateSlashing(uint256 validatorId, uint256 refundRatio) internal {
         // Simulate slashing by governance
         vm.startPrank(address(0xD100ae0000000000000000000000000000000000));
-        // Double sign bit indicating bad behavior  1 << 7 = 128
-        ISFC(stakingContract).deactivateValidator(validatorId, 128);
+        ISFC(stakingContract).deactivateValidator(validatorId, CHEATER_MASK);
         vm.stopPrank();
-        
+
+        assertEq(ISFC(stakingContract).isSlashed(validatorId), true);
+
         // Set refund ratio
         address owner = address(0x69Adb6Bd46852315ADbbfA633d2bbf792CdB3e04);
         vm.startPrank(owner);
@@ -211,8 +216,8 @@ contract BeefySonicSlashingTest is Test {
             uint256[] memory empty = new uint256[](validators.length);
             uint256[] memory txsFees = new uint256[](validators.length);
             uint256[] memory uptimes = new uint256[](validators.length);
-            
-            for (uint j = 0; j < validators.length; j++) {
+
+            for (uint256 j = 0; j < validators.length; j++) {
                 txsFees[j] = 1 ether;
                 uptimes[j] = 1 days;
             }
@@ -220,11 +225,11 @@ contract BeefySonicSlashingTest is Test {
             ISFC(stakingContract).sealEpoch(empty, empty, uptimes, txsFees);
             ISFC(stakingContract).sealEpochValidators(validators);
             vm.stopPrank();
-        }   
+        }
     }
 
     function _proxy(address _implementation) internal returns (address) {
         bytes memory _empty = "";
         return address(new ERC1967Proxy(address(_implementation), _empty));
     }
-} 
+}

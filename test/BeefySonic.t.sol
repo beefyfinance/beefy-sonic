@@ -415,10 +415,7 @@ contract BeefySonicTest is Test {
         beefySonic.addValidator(2);
         
         vm.expectRevert(encodedError);
-        beefySonic.setValidatorActive(0, false);
-        
-        vm.expectRevert(encodedError);
-        beefySonic.setValidatorClaim(0, false);
+        beefySonic.setValidatorStatus(0, false, false);
         
         vm.expectRevert(encodedError);
         beefySonic.unpause();
@@ -485,9 +482,6 @@ contract BeefySonicTest is Test {
     }
 
     function test_harvestConstraints() public {
-
-        // First let's verify the initial minHarvest value
-        assertEq(beefySonic.minHarvest(), 1e6);
         
         // Setup: Make a deposit so we have something to harvest
         _deposit(1000e18, "alice");

@@ -317,7 +317,26 @@ contract BeefySonicTest is Test {
 
     function test_MultipleWithdraw() public {
         address alice = _deposit(1000e18, "alice");
-        _withdrawMultiple(1000e18, alice);
+        uint256 sharesAmount = 1000e18;
+        vm.startPrank(alice);
+
+        uint256 halfShares = sharesAmount / 2;
+        uint256 requestId = beefySonic.requestRedeem(halfShares, alice, alice);
+        uint256 secondRequestId = beefySonic.requestRedeem(sharesAmount - halfShares, alice, alice);
+
+        vm.stopPrank();
+        vm.warp(block.timestamp + 14 days + 1);
+        _advanceEpoch(4);
+
+        vm.startPrank(alice);
+
+        uint256 shares = beefySonic.withdraw(requestId, alice, alice);
+        assertEq(shares, halfShares);
+
+        shares = beefySonic.withdraw(secondRequestId, alice, alice);
+        assertEq(shares, sharesAmount - halfShares);
+
+        vm.stopPrank();
     }
 
     function test_Setters() public {
@@ -655,28 +674,6 @@ contract BeefySonicTest is Test {
             ISFC(stakingContract).sealEpochValidators(validators);
             vm.stopPrank();
         }
-    }
-
-    function _withdrawMultiple(uint256 sharesAmount, address user) internal {
-        vm.startPrank(user);
-
-        uint256[] memory requestIds = new uint256[](2);
-        uint256 halfShares = sharesAmount / 2;
-        uint256 requestId = beefySonic.requestRedeem(halfShares, user, user);
-        uint256 secondRequestId = beefySonic.requestRedeem(sharesAmount - halfShares, user, user);
-        requestIds[0] = requestId;
-        requestIds[1] = secondRequestId;
-
-        vm.stopPrank();
-        vm.warp(block.timestamp + 14 days + 1);
-        _advanceEpoch(4);
-
-        vm.startPrank(user);
-
-        uint256 shares = beefySonic.withdraw(requestIds, user, user);
-        assertEq(shares, sharesAmount);
-
-        vm.stopPrank();
     }
 
     function _withdraw(uint256 sharesAmount, address user) internal {

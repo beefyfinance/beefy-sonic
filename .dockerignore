@@ -1,7 +1,6 @@
 # Compiler files
 cache/
 out/
-node_modules
 lcov.info
 
 # Ignores development broadcast logs
@@ -18,3 +17,6 @@ docs/
 .gambit
 .vscode/settings.json
 sumo
+
+test/mutation/test_mutants_parallel.sh
+test/mutation/mutant_results

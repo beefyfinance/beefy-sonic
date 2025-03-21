@@ -3,5 +3,5 @@
     "solc_remappings": [
         "@openzeppelin/=node_modules/@openzeppelin/"
     ],
-    "solc_version": "0.8.28"
+    "outdir": ".gambit"
 }

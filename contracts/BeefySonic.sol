@@ -703,7 +703,7 @@ contract BeefySonic is
 
                 // we claimed remaining rewards and now set it to claim to false
                 (bool isOk,) = _validatorStatus(validator.id);
-                if (!validator.active && !isOk) validator.claim = false;
+                if (!validator.active && !isOk) _setValidatorStatus(i, false, false);
             }
         }
     }

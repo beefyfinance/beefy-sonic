@@ -321,7 +321,8 @@ contract BeefySonicTest is Test {
         vm.startPrank(beefySonic.owner());
 
         beefySonic.setLiquidityFeeRecipient(address(0x1234567890123456789012345678901234567890));
-        assertEq(beefySonic.liquidityFeeRecipient(), address(0x1234567890123456789012345678901234567890));
+        (, address _liquidityFeeRecipient) = beefySonic.feeRecipients();
+        assertEq(_liquidityFeeRecipient, address(0x1234567890123456789012345678901234567890));
 
         vm.expectRevert(IBeefySonic.InvalidLiquidityFee.selector);
         beefySonic.setLiquidityFee(0.11e18);
@@ -333,7 +334,8 @@ contract BeefySonicTest is Test {
         assertEq(beefySonic.beefyFeeConfig(), address(0x1234567890123456789012345678901234567890));
 
         beefySonic.setBeefyFeeRecipient(address(0x1234567890123456789012345678901234567890));
-        assertEq(beefySonic.beefyFeeRecipient(), address(0x1234567890123456789012345678901234567890));
+        (address _beefyFeeRecipient, ) = beefySonic.feeRecipients();
+        assertEq(_beefyFeeRecipient, address(0x1234567890123456789012345678901234567890));
 
         beefySonic.setKeeper(address(0x1234567890123456789012345678901234567890));
         assertEq(beefySonic.keeper(), address(0x1234567890123456789012345678901234567890));
@@ -373,6 +375,22 @@ contract BeefySonicTest is Test {
         assertEq(beefySonic.supportsInterface(0xe3bc4e65), true);
 
         vm.stopPrank();
+    }
+
+    function testGas_Transfer() public {
+        // Setup: deposit funds for gas measurement
+        address user1 = _deposit(1000e18, "user1");
+        address user2 = makeAddr("user2");
+        
+        // Measure gas for transfer
+        vm.startPrank(user1);
+        uint256 startGas = gasleft();
+        beefySonic.transfer(user2, 100e18);
+        uint256 gasUsed = startGas - gasleft();
+        vm.stopPrank();
+        
+        // Log gas used for comparison between optimizer settings
+        console.log("Gas used for transfer with current optimizer settings:", gasUsed);
     }
 
     function _deposit(uint256 amount, string memory _name) internal returns (address user) {

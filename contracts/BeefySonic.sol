@@ -809,11 +809,6 @@ contract BeefySonic is
         return ERC4626Upgradeable.decimals();
     }
 
-    /// @notice Get the liquidity fee recipient
-    function liquidityFeeRecipient() external view returns (address) {
-        return getBeefySonicStorage().liquidityFeeRecipient;
-    }
-
     /// @notice Total assets on this contract
     /// @return total Total amount of assets
     function totalAssets() public view override returns (uint256 total) {
@@ -867,8 +862,8 @@ contract BeefySonic is
 
     /// @notice Get the Beefy fee recipient
     /// @return beefyFeeRecipient Address of the Beefy fee recipient
-    function beefyFeeRecipient() external view returns (address) {
-        return getBeefySonicStorage().beefyFeeRecipient;
+    function feeRecipients() external view returns (address beefyFeeRecipient, address liquidityFeeRecipient) {
+        return (getBeefySonicStorage().beefyFeeRecipient, getBeefySonicStorage().liquidityFeeRecipient);
     }
 
     /// @notice Get the Beefy fee configuration

@@ -342,7 +342,8 @@ contract BeefySonic is
     /// @return shares Amount of shares withdrawn
     function withdraw(uint256[] memory _requestIds, address _receiver, address _controller) external returns (uint256 shares) {
         for (uint256 i; i < _requestIds.length; ++i) {
-            shares += withdraw(_requestIds[i], _receiver, _controller);
+            (,uint256 _shares) = _processWithdraw(_requestIds[i], _receiver, _controller, false);
+            shares += _shares;
         }
     }
     
@@ -357,15 +358,7 @@ contract BeefySonic is
         override
         returns (uint256 shares)
     {
-        BeefySonicStorage storage $ = getBeefySonicStorage();
-       
-        _onlyOperatorOrController(_controller);
-
-        RedemptionRequest storage request = $.pendingRedemptions[_controller][_requestId];
-
-        shares = request.shares;
-        
-        _processWithdraw(request, _requestId, _receiver, _controller, request.emergency);
+        (, shares) = _processWithdraw(_requestId, _receiver, _controller, false);
     }
 
     /// @notice Redeem shares for assets
@@ -379,14 +372,7 @@ contract BeefySonic is
         override
         returns (uint256 assets)
     {
-        BeefySonicStorage storage $ = getBeefySonicStorage();
-
-        // Ensure the controller is the caller or an authorized operator
-        _onlyOperatorOrController(_controller);
-
-        RedemptionRequest storage request = $.pendingRedemptions[_controller][_requestId];
-
-        return _processWithdraw(request, _requestId, _receiver, _controller, request.emergency);
+        (assets, ) = _processWithdraw(_requestId, _receiver, _controller, false);
     }
 
     /// @notice Emergency withdraw assets from the vault
@@ -395,14 +381,7 @@ contract BeefySonic is
     /// @param _controller Controller address
     /// @return assets Amount of assets redeemed
     function emergencyWithdraw(uint256 _requestId, address _receiver, address _controller) external returns (uint256 assets) {
-        BeefySonicStorage storage $ = getBeefySonicStorage();
-
-        // Ensure the controller is the caller or an authorized operator
-        _onlyOperatorOrController(_controller);
-
-        RedemptionRequest storage request = $.pendingRedemptions[_controller][_requestId];
-
-        return _processWithdraw(request, _requestId, _receiver, _controller, true);
+        (assets, ) = _processWithdraw(_requestId, _receiver, _controller, true);
     }
 
     /// @notice Check for slashed validators and undelegate
@@ -466,23 +445,27 @@ contract BeefySonic is
     }
 
     /// @notice Process a withdrawal
-    /// @param _request The request to process
     /// @param _requestId The request ID
     /// @param _receiver Address to receive the assets
     /// @param _controller Controller address
     /// @return assets Amount of assets redeemed
-    function _processWithdraw(RedemptionRequest storage _request, uint256 _requestId, address _receiver, address _controller, bool emergency) private returns (uint256 assets) {
+    function _processWithdraw(uint256 _requestId, address _receiver, address _controller, bool emergency) private returns (uint256 assets, uint256 shares) {
         BeefySonicStorage storage $ = getBeefySonicStorage();
+       
+        _onlyOperatorOrController(_controller);
+
+        RedemptionRequest storage _request = $.pendingRedemptions[_controller][_requestId];
+
         _NoZeroAddress(_receiver);
-          // Ensure the request is claimable
+        // Ensure the request is claimable
         if (_request.claimableTimestamp > block.timestamp) revert NotClaimableYet();
 
         // Withdraw assets from the SFC
         uint256 amountWithdrawn = _withdrawFromSFC(_requestId, _controller);
 
-        if (amountWithdrawn < _request.assets && !emergency) revert WithdrawError();
+        if (amountWithdrawn < _request.assets && !emergency && !_request.emergency) revert WithdrawError();
 
-        uint256 shares = _request.shares;
+        shares = _request.shares;
 
         // Delete the request to not allow double withdrawal        
         delete $.pendingRedemptions[_controller][_requestId];
@@ -490,7 +473,7 @@ contract BeefySonic is
     
         _withdraw(msg.sender, _receiver, _controller, amountWithdrawn, shares);
 
-        return amountWithdrawn;
+        return (amountWithdrawn, shares);
     }
 
     /// @notice Remove a request from the pending requests

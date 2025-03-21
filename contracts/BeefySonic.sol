@@ -168,7 +168,7 @@ contract BeefySonic is
             // Check if the validator is ok
             (bool isOk,) = _validatorStatus(validator.id);
             if (!isOk) {
-                _setValidatorActive(i, false);
+                _setValidatorStatus(i, false, false);
 
                 continue;
             }
@@ -532,7 +532,7 @@ contract BeefySonic is
             uint256 index = _getValidatorIndex(validatorId);
             if (_isSlashed) {
                 // update validator to not active find index
-                _setValidatorActive(index, false);
+                _setValidatorStatus(index, false, false);
                 // If the validator is slashed, we need to make sure we get the refund if more than 0
                 uint256 refundAmount = slashingRefundRatio(validatorId);
                 if (refundAmount > 0) {
@@ -791,7 +791,6 @@ contract BeefySonic is
         return getBeefySonicStorage().validators.length;
     }
 
-
     /// @notice Get the rate used by Balancer
     /// @return rate Rate
     function getRate() external view returns (uint256) {
@@ -819,12 +818,6 @@ contract BeefySonic is
     /// @return total Total amount of assets
     function totalAssets() public view override returns (uint256 total) {
         total = getBeefySonicStorage().storedTotal - lockedProfit();
-    }
-    
-    /// @notice Get the minimum harvest amount
-    /// @return minHarvest Minimum harvest amount
-    function minHarvest() public view returns (uint256) {
-        return getBeefySonicStorage().minHarvest;
     }
 
     /// @notice Get the lock duration
@@ -930,20 +923,16 @@ contract BeefySonic is
     /// @notice Set a validator's active status
     /// @param _validatorIndex Index of the validator
     /// @param _active Whether the validator is active
-    function setValidatorActive(uint256 _validatorIndex, bool _active) external onlyOwner {
-        _setValidatorActive(_validatorIndex, _active);
-    }
-
-    function setValidatorClaim(uint256 _validatorIndex, bool _shouldClaim) external onlyOwner {
-        BeefySonicStorage storage $ = getBeefySonicStorage();
-        $.validators[_validatorIndex].claim = _shouldClaim;
-        emit ValidatorClaimSet(_validatorIndex, _shouldClaim);
+    /// @param _shouldClaim Whether the validator should claim
+    function setValidatorStatus(uint256 _validatorIndex, bool _active, bool _shouldClaim) external onlyOwner {
+        _setValidatorStatus(_validatorIndex, _active, _shouldClaim);
     }
 
     /// @notice Set a validator's active status
     /// @param _validatorIndex Index of the validator
     /// @param _active Whether the validator is active
-    function _setValidatorActive(uint256 _validatorIndex, bool _active) private {
+    /// @param _shouldClaim Whether the validator should claim
+    function _setValidatorStatus(uint256 _validatorIndex, bool _active, bool _shouldClaim) private {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         
         if (_validatorIndex >= $.validators.length) revert InvalidValidatorIndex();
@@ -952,9 +941,9 @@ contract BeefySonic is
         
         $.validators[_validatorIndex].active = _active;
         $.validators[_validatorIndex].slashed = _isSlashed;
-        if (_active) $.validators[_validatorIndex].claim = true;
+        $.validators[_validatorIndex].claim = _shouldClaim;
         
-        emit ValidatorStatusChanged(_validatorIndex, _active);
+        emit ValidatorStatusChanged(_validatorIndex, _active, _shouldClaim);
     }
 
     /// @notice Set an operator to finalize the claim of the request to withdraw

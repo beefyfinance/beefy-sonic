@@ -61,8 +61,8 @@ contract BeefySonicTest is Test {
         vm.expectRevert(IBeefySonic.InvalidValidatorIndex.selector);
         beefySonic.addValidator(beefyValidatorId);
 
-        beefySonic.setValidatorActive(0, false);
-        beefySonic.setValidatorActive(0, true);
+        beefySonic.setValidatorStatus(0, false, false);
+        beefySonic.setValidatorStatus(0, true, true);
 
         uint256 len = beefySonic.validatorsLength();
         assertEq(len, 1);
@@ -341,9 +341,6 @@ contract BeefySonicTest is Test {
         beefySonic.setLockDuration(2 days);
         assertEq(beefySonic.lockDuration(), 2 days);
 
-        beefySonic.setMinHarvest(10e18);
-        assertEq(beefySonic.minHarvest(), 10e18);
-
         beefySonic.setKeeper(address(0x1234567890123456789012345678901234567890));
         assertEq(beefySonic.keeper(), address(0x1234567890123456789012345678901234567890));
 
@@ -356,7 +353,7 @@ contract BeefySonicTest is Test {
         vm.expectRevert(IBeefySonic.ERC7540AsyncFlow.selector);
         beefySonic.previewWithdraw(1000e18);
 
-        beefySonic.setValidatorClaim(0, true);
+        beefySonic.setValidatorStatus(0, false, true);
 
         vm.startPrank(address(0xD100ae0000000000000000000000000000000000));
         // bit indicating offline 1 << 3
@@ -369,7 +366,7 @@ contract BeefySonicTest is Test {
         beefySonic.addValidator(15);
 
         vm.expectRevert(IBeefySonic.InvalidValidatorIndex.selector);
-        beefySonic.setValidatorActive(15, true);
+        beefySonic.setValidatorStatus(15, true, true);
 
         assertEq(beefySonic.supportsInterface(0x620ee8e4), true);
         assertEq(beefySonic.supportsInterface(0x2f0a18c5), true);

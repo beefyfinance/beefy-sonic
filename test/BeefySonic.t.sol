@@ -484,6 +484,42 @@ contract BeefySonicTest is Test {
         UUPSUpgradeable(address(beefySonic)).upgradeToAndCall(newImpl, new bytes(0));
     }
 
+    function test_harvestConstraints() public {
+
+        // First let's verify the initial minHarvest value
+        assertEq(beefySonic.minHarvest(), 1e6);
+        
+        // Setup: Make a deposit so we have something to harvest
+        _deposit(1000e18, "alice");
+        
+        // Test 1: Should revert when trying to harvest with rewards less than minHarvest
+        // We don't advance epochs, so there will be minimal/no rewards
+        vm.expectRevert(IBeefySonic.NotEnoughRewards.selector);
+        beefySonic.harvest();
+        vm.stopPrank();
+        
+        // Generate some rewards by advancing epoch
+        _advanceEpoch(1);
+        
+        // Do a successful harvest
+        beefySonic.harvest();
+        vm.stopPrank();
+        
+        // Test 2: Should revert when trying to harvest within lockDuration
+        // Try to harvest again immediately (within lockDuration which is 1 day)
+        vm.expectRevert(IBeefySonic.NotReadyForHarvest.selector);
+        beefySonic.harvest();
+        vm.stopPrank();
+
+        // Advance time past lockDuration
+        _advanceEpoch(2);
+        vm.warp(block.timestamp + 1 days + 1);
+
+        // Should succeed now
+        beefySonic.harvest();
+        vm.stopPrank();
+    }
+
     function _deposit(uint256 amount, string memory _name) internal returns (address user) {
         user = makeAddr(_name);
         vm.startPrank(user);

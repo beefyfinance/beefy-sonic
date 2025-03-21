@@ -9,9 +9,13 @@
     "build": "forge build",
     "test": "forge test",
     "coverage": "forge coverage",
-    "coverage:lcov": "forge coverage --report lcov"
+    "coverage:lcov": "forge coverage --report lcov",
+    "test:slither": "slither . --config slither.config.json",
+    "test:gambit": "gambit --json gambit.config.json && ./test_mutants.sh",
+    "test:sumo": "npx sumo test"
   },
   "devDependencies": {
+    "@morenabarboni/sumo": "^2.5.4",
     "@openzeppelin/contracts": "npm:@openzeppelin/contracts",
     "@openzeppelin/contracts-upgradeable": "npm:@openzeppelin/contracts-upgradeable"
   },

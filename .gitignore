@@ -14,3 +14,7 @@ docs/
 
 # Dotenv file
 .env
+
+gambit_out
+.vscode/settings.json
+sumo

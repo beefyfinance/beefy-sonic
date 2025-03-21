@@ -8,7 +8,9 @@ import {ISFC} from "../contracts/interfaces/ISFC.sol";
 import {IConstantsManager} from "../contracts/interfaces/IConstantsManager.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 contract BeefySonicTest is Test {
     BeefySonic public beefySonic;
     BeefySonic public implementation;
@@ -373,10 +375,172 @@ contract BeefySonicTest is Test {
         assertEq(beefySonic.supportsInterface(0x620ee8e4), true);
         assertEq(beefySonic.supportsInterface(0x2f0a18c5), true);
         assertEq(beefySonic.supportsInterface(0xe3bc4e65), true);
+        assertEq(beefySonic.supportsInterface(0x01ffc9a7), true);
+        assertEq(beefySonic.supportsInterface(0x00000000), false);
 
         vm.stopPrank();
     }
 
+    function test_RevertNonOwnerSetters() public {
+        // Create a non-owner user
+        address nonOwner = makeAddr("nonOwner");
+        
+        vm.startPrank(nonOwner);
+
+        bytes memory encodedError = abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, nonOwner);
+        
+        // Test all setter functions revert for non-owner
+        vm.expectRevert(encodedError);
+        beefySonic.setBeefyFeeRecipient(address(1));
+        
+        vm.expectRevert(encodedError);
+        beefySonic.setBeefyFeeConfig(address(1));
+        
+        vm.expectRevert(encodedError);
+        beefySonic.setLiquidityFeeRecipient(address(1));
+        
+        vm.expectRevert(encodedError);
+        beefySonic.setLiquidityFee(0.05e18);
+        
+        vm.expectRevert(encodedError);
+        beefySonic.setKeeper(address(1));
+        
+        vm.expectRevert(encodedError);
+        beefySonic.setLockDuration(2 days);
+        
+        vm.expectRevert(encodedError);
+        beefySonic.setMinHarvest(2e18);
+        
+        vm.expectRevert(encodedError);
+        beefySonic.addValidator(2);
+        
+        vm.expectRevert(encodedError);
+        beefySonic.setValidatorActive(0, false);
+        
+        vm.expectRevert(encodedError);
+        beefySonic.setValidatorClaim(0, false);
+        
+        vm.expectRevert(encodedError);
+        beefySonic.unpause();
+        
+        vm.stopPrank();
+    }
+    
+    function test_RevertWhenPaused() public {
+        // Setup initial state
+        address user = makeAddr("user");
+        vm.deal(user, 100 ether);
+        
+        // First pause the contract as owner
+        beefySonic.pause();
+        
+        vm.startPrank(user);
+        
+        bytes memory encodedError = abi.encodeWithSelector(PausableUpgradeable.EnforcedPause.selector);
+
+        // Test deposit reverts when paused
+        vm.expectRevert(encodedError);
+        beefySonic.deposit(1 ether, user, user);
+        
+        // Test mint reverts when paused
+        vm.expectRevert(encodedError);
+        beefySonic.mint(1 ether, user, user);
+        
+        // Test harvest reverts when paused
+        vm.expectRevert(encodedError);
+        beefySonic.harvest();
+        
+        vm.stopPrank();
+    }
+
+    function test_proxyAssertions() public {
+        // We shouldn't be able to initialize the implementation
+        vm.expectRevert();
+        implementation.initialize(
+            want,
+            stakingContract,
+            beefyFeeRecipient,
+            keeper,
+            beefyFeeConfig,
+            liquidityFeeRecipient,
+            liquidityFee,
+            name,
+            symbol
+        );        
+
+        address newImpl = address(new BeefySonic());
+        
+        // only owner can upgrade
+        vm.startPrank(address(0x1));
+        vm.expectRevert();
+        UUPSUpgradeable(address(beefySonic)).upgradeToAndCall(newImpl, new bytes(0));
+
+        // We shouldn't be able to upgrade the implementation
+        vm.startPrank(beefySonic.owner());
+        vm.expectRevert();
+        UUPSUpgradeable(address(implementation)).upgradeToAndCall(newImpl, new bytes(0));
+
+        // We should be able to upgrade the implementation
+        UUPSUpgradeable(address(beefySonic)).upgradeToAndCall(newImpl, new bytes(0));
+    }
+
+    function test_harvestConstraints() public {
+
+        // First let's verify the initial minHarvest value
+        assertEq(beefySonic.minHarvest(), 1e6);
+        
+        // Setup: Make a deposit so we have something to harvest
+        _deposit(1000e18, "alice");
+        
+        // Test 1: Should revert when trying to harvest with rewards less than minHarvest
+        // We don't advance epochs, so there will be minimal/no rewards
+        vm.expectRevert(IBeefySonic.NotEnoughRewards.selector);
+        beefySonic.harvest();
+        vm.stopPrank();
+        
+        // Generate some rewards by advancing epoch
+        _advanceEpoch(1);
+        
+        // Do a successful harvest
+        beefySonic.harvest();
+        vm.stopPrank();
+        
+        // Test 2: Should revert when trying to harvest within lockDuration
+        // Try to harvest again immediately (within lockDuration which is 1 day)
+        vm.expectRevert(IBeefySonic.NotReadyForHarvest.selector);
+        beefySonic.harvest();
+        vm.stopPrank();
+
+        // Advance time past lockDuration
+        _advanceEpoch(2);
+        vm.warp(block.timestamp + 1 days + 1);
+
+        // Should succeed now
+        beefySonic.harvest();
+        vm.stopPrank();
+    }
+
+    function test_receive() public {
+        // Test positive case: receiving from asset (wrapped native)
+        vm.deal(want, 1 ether);
+        vm.prank(want);
+        (bool success,) = address(beefySonic).call{value: 1 ether}("");
+        assertTrue(success);
+
+        // Test positive case: receiving from staking contract
+        vm.deal(stakingContract, 1 ether);
+        vm.prank(stakingContract);
+        (success,) = address(beefySonic).call{value: 1 ether}("");
+        assertTrue(success);
+
+        // Test negative case: receiving from unauthorized address
+        address unauthorized = makeAddr("unauthorized");
+        vm.deal(unauthorized, 1 ether);
+        vm.prank(unauthorized);
+        vm.expectRevert(IBeefySonic.NotAuthorized.selector);
+        (success,) = address(beefySonic).call{value: 1 ether}("");
+     }
+     
     function testGas_Transfer() public {
         // Setup: deposit funds for gas measurement
         address user1 = _deposit(1000e18, "user1");

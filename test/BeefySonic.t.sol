@@ -10,6 +10,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 contract BeefySonicTest is Test {
     BeefySonic public beefySonic;
     BeefySonic public implementation;
@@ -450,6 +451,37 @@ contract BeefySonicTest is Test {
         beefySonic.harvest();
         
         vm.stopPrank();
+    }
+
+    function test_proxyAssertions() public {
+        // We shouldn't be able to initialize the implementation
+        vm.expectRevert();
+        implementation.initialize(
+            want,
+            stakingContract,
+            beefyFeeRecipient,
+            keeper,
+            beefyFeeConfig,
+            liquidityFeeRecipient,
+            liquidityFee,
+            name,
+            symbol
+        );        
+
+        address newImpl = address(new BeefySonic());
+        
+        // only owner can upgrade
+        vm.startPrank(address(0x1));
+        vm.expectRevert();
+        UUPSUpgradeable(address(beefySonic)).upgradeToAndCall(newImpl, new bytes(0));
+
+        // We shouldn't be able to upgrade the implementation
+        vm.startPrank(beefySonic.owner());
+        vm.expectRevert();
+        UUPSUpgradeable(address(implementation)).upgradeToAndCall(newImpl, new bytes(0));
+
+        // We should be able to upgrade the implementation
+        UUPSUpgradeable(address(beefySonic)).upgradeToAndCall(newImpl, new bytes(0));
     }
 
     function _deposit(uint256 amount, string memory _name) internal returns (address user) {

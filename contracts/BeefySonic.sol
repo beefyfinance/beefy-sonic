@@ -166,22 +166,17 @@ contract BeefySonic is
             if (!validator.active) continue;
 
             // Check if the validator is ok
-            (bool isOk, uint256 receivedStake) = _validatorStatus(validator.id);
+            (bool isOk,) = _validatorStatus(validator.id);
             if (!isOk) {
                 _setValidatorActive(i, false);
 
                 continue;
             }
 
-            // Check if the validator has available capacity
-            uint256 _selfStake = selfStake(validator.id);
-            
-            // Validator delegated capacity is maxDelegatedRatio times the self-stake
-            uint256 delegatedCapacity = 0; 
-            if (_selfStake > 0) delegatedCapacity = _selfStake * maxDelegatedRatio / 1e18;
+            uint256 delegatedCapacity = _delegatedCapacity(validator.id, maxDelegatedRatio);
             
             // Check if the validator has available capacity
-            if (delegatedCapacity >= (receivedStake + _amount)) return i;
+            if (delegatedCapacity >= _amount) return i;
             
         }
 
@@ -650,22 +645,27 @@ contract BeefySonic is
         uint256 maxDelegatedRatio = maxDelegateRatio();
 
         for (uint256 i; i < $.validators.length; ++i) {
-            uint256 _selfStake = selfStake($.validators[i].id);
-            (, uint256 receivedStake) = _validatorStatus($.validators[i].id);
-
-            // Avoid division by 0
-            if (_selfStake == 0) continue;
-            
-            // Validator delegated capacity is maxDelegatedRatio times the self-stake
-            uint256 delegatedCapacity = _selfStake * maxDelegatedRatio / 1e18;
-
-            // Validator received stake is the amount of S received by the validator
-            uint256 capacity = delegatedCapacity - receivedStake;
+            uint256 capacity = _delegatedCapacity($.validators[i].id, maxDelegatedRatio);
 
             if (capacity > largestCapacity) {
                 largestCapacity = capacity;
             }
         }
+    }
+
+    function _delegatedCapacity(uint256 _validatorId, uint256 _maxDelegatedRatio) private view returns (uint256) {
+        uint256 _selfStake = selfStake(_validatorId);
+        (, uint256 receivedStake) = _validatorStatus(_validatorId);
+
+        // Avoid division by 0
+        if (_selfStake == 0) return 0;
+        
+        // Validator delegated capacity is maxDelegatedRatio times the self-stake
+        uint256 delegatedCapacity = _selfStake * _maxDelegatedRatio / 1e18;
+
+        // Validator received stake is the amount of S received by the validator
+        uint256 capacity = delegatedCapacity - receivedStake;
+        return capacity;
     }
    
     /// @notice Notify the yield to start vesting

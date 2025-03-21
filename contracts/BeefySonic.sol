@@ -57,12 +57,12 @@ contract BeefySonic is
         string memory _name,
         string memory _symbol
     ) public initializer {
-        __UUPSUpgradeable_init();
-        __ERC20_init(_name, _symbol);
-        __ERC20Permit_init(_name);
-        __ERC4626_init(IERC20(_want));
-        __Ownable_init(msg.sender);
-        __Pausable_init();
+        __UUPSUpgradeable_init_unchained();
+        __ERC20_init_unchained(_name, _symbol);
+        __ERC20Permit_init_unchained(_name);
+        __ERC4626_init_unchained(IERC20(_want));
+        __Ownable_init_unchained(msg.sender);
+        __Pausable_init_unchained();
 
         // Limit the liquidity fee to 10%
         if (_liquidityFee > 0.1e18) revert InvalidLiquidityFee();
@@ -157,7 +157,7 @@ contract BeefySonic is
         if($.validators.length == 0) revert NoValidators();
 
         // Get max delegated ratio from the constants manager via the SFC
-        uint256 maxDelegatedRatio = IConstantsManager(ISFC($.stakingContract).constsAddress()).maxDelegatedRatio();
+        uint256 maxDelegatedRatio = maxDelegateRatio();
 
         // Loop and try to deposit into the first validator in the set with capacity
         for(uint256 i; i < $.validators.length; ++i) {
@@ -174,12 +174,12 @@ contract BeefySonic is
             }
 
             // Check if the validator has available capacity
-            uint256 selfStake = ISFC($.stakingContract).getSelfStake(validator.id);
+            uint256 _selfStake = selfStake(validator.id);
             (, uint256 receivedStake,,,,,) = ISFC($.stakingContract).getValidator(validator.id);
             
             // Validator delegated capacity is maxDelegatedRatio times the self-stake
             uint256 delegatedCapacity = 0; 
-            if (selfStake > 0) delegatedCapacity = selfStake * maxDelegatedRatio / 1e18;
+            if (_selfStake > 0) delegatedCapacity = _selfStake * maxDelegatedRatio / 1e18;
             
             // Check if the validator has available capacity
             if (delegatedCapacity >= (receivedStake + _amount)) return i;
@@ -290,9 +290,9 @@ contract BeefySonic is
         /// Loop and look to see if any validator is slashed, if they are and have enough delegations we allow a request to process in emergency mode
         for (uint256 i; i < $.validators.length; i++) {
             Validator storage validator = $.validators[i];
-            bool isSlashed = ISFC($.stakingContract).isSlashed(validator.id);
+            bool _isSlashed = isSlashed(validator.id);
 
-            if (isSlashed) {
+            if (_isSlashed) {
                 if (validator.delegations == 0) continue;
                 // brick redeem requests unless via emergency
                 if (!_emergency) revert WithdrawError();
@@ -418,8 +418,8 @@ contract BeefySonic is
         Validator storage validator = $.validators[validatorIndex];
 
         // Check if the validator is slashed
-        bool isSlashed = ISFC($.stakingContract).isSlashed(validator.id);
-        if (isSlashed) {
+        bool _isSlashed = isSlashed(validator.id);
+        if (_isSlashed) {
             // create a withdraw ID
             uint256 wId = $.wId;
             uint256 refundRatio = ISFC($.stakingContract).slashingRefundRatio(validator.id);
@@ -551,9 +551,9 @@ contract BeefySonic is
             uint256 requestId = request.withdrawalIds[j];
 
             // Check if the validator is slashed
-            bool isSlashed = ISFC($.stakingContract).isSlashed(validatorId);
+            bool _isSlashed = isSlashed(validatorId);
             uint256 index = _getValidatorIndex(validatorId);
-            if (isSlashed) {
+            if (_isSlashed) {
                 // update validator to not active find index
                 _setValidatorActive(index, false);
                 // If the validator is slashed, we need to make sure we get the refund if more than 0
@@ -648,17 +648,17 @@ contract BeefySonic is
         largestCapacity = 0;
 
         // Get max delegated ratio from the constants manager via the SFC
-        uint256 maxDelegatedRatio = IConstantsManager(ISFC($.stakingContract).constsAddress()).maxDelegatedRatio();
+        uint256 maxDelegatedRatio = maxDelegateRatio();
 
         for (uint256 i; i < $.validators.length; ++i) {
-            uint256 selfStake = ISFC($.stakingContract).getSelfStake($.validators[i].id);
+            uint256 _selfStake = selfStake($.validators[i].id);
             (, uint256 receivedStake,,,,,) = ISFC($.stakingContract).getValidator($.validators[i].id);
 
             // Avoid division by 0
-            if (selfStake == 0) continue;
+            if (_selfStake == 0) continue;
             
             // Validator delegated capacity is maxDelegatedRatio times the self-stake
-            uint256 delegatedCapacity = selfStake * maxDelegatedRatio / 1e18;
+            uint256 delegatedCapacity = _selfStake * maxDelegatedRatio / 1e18;
 
             // Validator received stake is the amount of S received by the validator
             uint256 capacity = delegatedCapacity - receivedStake;
@@ -774,6 +774,25 @@ contract BeefySonic is
         uint256 elapsed = block.timestamp - $.lastHarvest;
         uint256 remaining = elapsed < $.lockDuration ? $.lockDuration - elapsed : 0;
         locked = $.totalLocked * remaining / $.lockDuration;
+    }
+
+    /// @notice Get the self-stake of a validator
+    /// @param _validatorId ID of the validator
+    /// @return selfStake Amount of assets staked
+    function selfStake(uint256 _validatorId) private view returns (uint256) {
+        return ISFC(getBeefySonicStorage().stakingContract).getSelfStake(_validatorId);
+    }
+
+    /// @notice Check if a validator is slashed
+    /// @param _validatorId ID of the validator
+    function isSlashed(uint256 _validatorId) private view returns (bool) {
+        return ISFC(getBeefySonicStorage().stakingContract).isSlashed(_validatorId);
+    }
+
+    /// @notice Get the maximum delegate ratio
+    /// @return maxDelegateRatio Maximum delegate ratio
+    function maxDelegateRatio() private view returns (uint256) {    
+        return IConstantsManager(ISFC(getBeefySonicStorage().stakingContract).constsAddress()).maxDelegatedRatio();
     }
 
     /// @notice Get the number of validators
@@ -938,10 +957,10 @@ contract BeefySonic is
         
         if (_validatorIndex >= $.validators.length) revert InvalidValidatorIndex();
 
-        bool isSlashed = ISFC($.stakingContract).isSlashed($.validators[_validatorIndex].id);
+        bool _isSlashed = isSlashed($.validators[_validatorIndex].id);
         
         $.validators[_validatorIndex].active = _active;
-        $.validators[_validatorIndex].slashed = isSlashed;
+        $.validators[_validatorIndex].slashed = _isSlashed;
         if (_active) $.validators[_validatorIndex].claim = true;
         
         emit ValidatorStatusChanged(_validatorIndex, _active);

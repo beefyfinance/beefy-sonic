@@ -10,6 +10,26 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
+/**
+ * @title BeefySonicInitializationTest
+ * @dev Test suite for BeefySonic's initialization and storage safety
+ * 
+ * This contract verifies the secure initialization of BeefySonic, focusing on:
+ * - Proper storage variable initialization
+ * - Protection against double initialization
+ * - Implementation contract security
+ * - Ownership and access control setup
+ * 
+ * Key scenarios covered:
+ * 1. Storage slot verification pre and post initialization
+ * 2. Invalid parameter handling during initialization
+ * 3. Implementation contract initialization blocking
+ * 4. Ownership transfer and access control
+ * 5. Upgradeability safety checks
+ * 
+ * The tests ensure the contract is correctly initialized and maintains
+ * its security properties through the initialization process and upgrades.
+ */
 contract BeefySonicInitializationTest is Test {
     BeefySonic public beefySonic;
     BeefySonic public implementation;

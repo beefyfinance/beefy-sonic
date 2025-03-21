@@ -10,6 +10,25 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IFeeConfig} from "../contracts/interfaces/IFeeConfig.sol";
 
+/**
+ * @title BeefySonicFeesTest
+ * @dev Test suite for BeefySonic's fee calculation and distribution functionality
+ * 
+ * This contract tests the fee-related mechanisms in BeefySonic, including:
+ * - Fee calculation accuracy for both Beefy and liquidity fees
+ * - Fee distribution to configured recipients
+ * - Fee configuration changes and their effects
+ * - Multiple harvest cycles and cumulative fee distribution
+ * 
+ * Key scenarios covered:
+ * 1. Basic fee calculation and distribution after harvests
+ * 2. Fee recipient and rate changes
+ * 3. Invalid fee configuration handling
+ * 4. Multiple harvest cycles with compounding rewards
+ * 
+ * The tests verify both the Beefy protocol fees and liquidity provider fees
+ * are correctly calculated and distributed to their respective recipients.
+ */
 contract BeefySonicFeesTest is Test {
     BeefySonic public beefySonic;
     BeefySonic public implementation;

@@ -9,6 +9,26 @@ import {IConstantsManager} from "../contracts/interfaces/IConstantsManager.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+/**
+ * @title BeefySonicValidatorsTest
+ * @dev Test suite for BeefySonic's validator management functionality
+ * 
+ * This contract tests the validator lifecycle and status management in BeefySonic, including:
+ * - Validator addition, deactivation, and reactivation flows
+ * - Capacity management and deposit distribution
+ * - Offline validator handling and failover mechanisms
+ * - Multi-validator operations and interactions
+ * 
+ * Key scenarios covered:
+ * 1. Complete validator lifecycle (addition → active → offline → reactivation)
+ * 2. Capacity limits and overflow handling
+ * 3. Offline validator detection and response
+ * 4. Multiple validator coordination and load balancing
+ * 5. Validator claims and rewards management
+ * 
+ * The tests ensure proper validator state transitions and maintain
+ * system stability during various operational scenarios.
+ */
 contract BeefySonicValidatorsTest is Test {
     BeefySonic public beefySonic;
     BeefySonic public implementation;

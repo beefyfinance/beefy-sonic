@@ -9,6 +9,26 @@ import {IConstantsManager} from "../contracts/interfaces/IConstantsManager.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+/**
+ * @title BeefySonicSlashingTest
+ * @dev Test suite for BeefySonic's slashing recovery mechanisms
+ * 
+ * This contract tests the slashing recovery functionality in BeefySonic, including:
+ * - Partial and complete slashing scenarios
+ * - Recovery fund calculation and distribution
+ * - Emergency withdrawal procedures
+ * - Multi-validator slashing events
+ * 
+ * Key scenarios covered:
+ * 1. Partial slashing with various refund ratios
+ * 2. Complete slashing with zero refund
+ * 3. Recovery fund redistribution to active validators
+ * 4. Emergency withdrawals after slashing
+ * 5. Multiple validator slashing coordination
+ * 
+ * The tests utilize the Sonic fork and simulate slashing events
+ * through the SFC contract to verify proper handling and accounting.
+ */
 contract BeefySonicSlashingTest is Test {
     BeefySonic public beefySonic;
     BeefySonic public implementation;

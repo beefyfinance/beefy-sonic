@@ -178,6 +178,104 @@ contract BeefySonicSlashingTest is Test {
         assertTrue(lastValidator.delegations > 0, "Recovered funds not redistributed");
     }
 
+    function test_ComplexSlashingRecoveryWithFees() public {
+        // Setup multiple validators with different amounts
+        uint256 thirdValidatorId = 13;
+        vm.startPrank(beefySonic.owner());
+        beefySonic.addValidator(secondValidatorId);
+        beefySonic.addValidator(thirdValidatorId);
+        beefySonic.setValidatorStatus(1, true, true);
+        beefySonic.setValidatorStatus(2, true, true);
+        vm.stopPrank();
+
+        // Make deposits from multiple users
+        address alice = _deposit(3000e18, "alice");
+        address bob = _deposit(2000e18, "bob");
+
+        // Record initial balances
+        uint256 initialBeefyFeeBalance = IERC20(want).balanceOf(beefyFeeRecipient);
+        uint256 initialLiquidityFeeBalance = IERC20(want).balanceOf(liquidityFeeRecipient);
+        uint256 initialStoredTotal = beefySonic.totalAssets();
+
+        // Create redemption requests with different amounts
+        vm.startPrank(alice);
+        uint256 request1 = beefySonic.requestRedeem(1500e18, alice, alice);
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        uint256 request2 = beefySonic.requestRedeem(1000e18, bob, bob);
+        vm.stopPrank();
+
+        // Simulate different slashing scenarios
+        _simulateSlashing(beefyValidatorId, 0.7e18); // 70% refund
+        _simulateSlashing(secondValidatorId, 0.3e18); // 30% refund
+
+        // Process recovery for both validators
+        vm.startPrank(beefySonic.owner());
+        beefySonic.checkForSlashedValidatorsAndUndelegate(0);
+        beefySonic.checkForSlashedValidatorsAndUndelegate(1);
+
+        // Advance time for withdrawal period
+        vm.warp(block.timestamp + 14 days + 1);
+        _advanceEpoch(4);
+
+        // harvest
+        beefySonic.harvest();
+
+        // Complete slashed validator withdrawals
+        uint256 recoveredAmount = 0;
+        recoveredAmount += beefySonic.completeSlashedValidatorWithdraw(0);
+        recoveredAmount += beefySonic.completeSlashedValidatorWithdraw(1);
+        vm.stopPrank();
+
+        // Process emergency withdrawals
+        vm.startPrank(alice);
+        uint256 aliceBeforeBalance = IERC20(want).balanceOf(alice);
+        beefySonic.emergencyWithdraw(request1, alice, alice);
+        uint256 aliceRecovered = IERC20(want).balanceOf(alice) - aliceBeforeBalance;
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        uint256 bobBeforeBalance = IERC20(want).balanceOf(bob);
+        beefySonic.emergencyWithdraw(request2, bob, bob);
+        uint256 bobRecovered = IERC20(want).balanceOf(bob) - bobBeforeBalance;
+        vm.stopPrank();
+
+        // Verify fee distributions
+        uint256 beefyFeeCharged = IERC20(want).balanceOf(beefyFeeRecipient) - initialBeefyFeeBalance;
+        uint256 liquidityFeeCharged = IERC20(want).balanceOf(liquidityFeeRecipient) - initialLiquidityFeeBalance;
+
+        assertTrue(beefyFeeCharged > 0, "Beefy fees should be charged");
+        assertTrue(liquidityFeeCharged > 0, "Liquidity fees should be charged");
+
+        // Calculate expected fees (10% liquidity fee)
+        uint256 expectedLiquidityFee = 486997347496628500;
+        assertApproxEqRel(liquidityFeeCharged, expectedLiquidityFee, 0.0001e18, "Liquidity fee should be ~10%");
+
+        // Verify final validator states
+        {
+            IBeefySonic.Validator memory validator0 = beefySonic.validatorByIndex(0);
+            IBeefySonic.Validator memory validator1 = beefySonic.validatorByIndex(1);
+            IBeefySonic.Validator memory validator2 = beefySonic.validatorByIndex(2);
+
+            assertFalse(validator0.active, "First validator should be inactive");
+            assertFalse(validator1.active, "Second validator should be inactive");
+            assertTrue(validator2.active, "Third validator should remain active");
+            assertTrue(validator2.delegations > 0, "Remaining funds should be delegated to third validator");
+        }
+
+        // Verify stored total is reduced by slashing losses
+        uint256 finalStoredTotal = beefySonic.totalAssets();
+        assertTrue(finalStoredTotal < initialStoredTotal, "Stored total should be reduced by slashing");
+
+        // Verify exact recovery calculations
+        uint256 totalRecovered = aliceRecovered + bobRecovered;
+        uint256 totalFees = beefyFeeCharged + liquidityFeeCharged;
+        assertApproxEqRel(
+            totalRecovered + totalFees, recoveredAmount, 0.01e18, "Total recovered + fees should equal recovered amount"
+        );
+    }
+
     // Helper functions
     function _deposit(uint256 amount, string memory _name) internal returns (address user) {
         user = makeAddr(_name);

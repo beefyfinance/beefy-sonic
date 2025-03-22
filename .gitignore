@@ -17,4 +17,5 @@ docs/
 
 .gambit
 .vscode/settings.json
+.sumo*
 sumo

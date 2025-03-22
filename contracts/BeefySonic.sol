@@ -448,7 +448,11 @@ contract BeefySonic is
 
     /// @notice Complete the withdrawal of a slashed validator
     /// @param validatorIndex Index of the validator
-    function completeSlashedValidatorWithdraw(uint256 validatorIndex) external onlyOwner {
+    function completeSlashedValidatorWithdraw(uint256 validatorIndex)
+        external
+        onlyOwner
+        returns (uint256 amountRecovered)
+    {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         Validator storage validator = $.validators[validatorIndex];
 
@@ -456,7 +460,6 @@ contract BeefySonic is
         uint256 recoverableAmount = 0;
         if (refundRatio > 0) recoverableAmount = validator.slashedDelegations * refundRatio / 1e18;
 
-        uint256 amountRecovered = 0;
         if (recoverableAmount > 0) {
             uint256 before = address(this).balance;
             ISFC($.stakingContract).withdraw(validator.id, validator.slashedWId);
@@ -523,26 +526,14 @@ contract BeefySonic is
         if (pendingRequests.length == 0) return;
 
         // Find the index of the request ID
-        uint256 index = type(uint256).max; // Invalid index to start
         for (uint256 i; i < pendingRequests.length; ++i) {
             if (pendingRequests[i] == _requestId) {
-                index = i;
-                break;
+                // move the last element to the position of the removed element and pop
+                pendingRequests[i] = pendingRequests[pendingRequests.length - 1];
+                pendingRequests.pop();
+                return;
             }
         }
-
-        // If the request ID was not found, nothing to do
-        if (index == type(uint256).max) return;
-
-        // If it's the last element, just pop it
-        if (index == pendingRequests.length - 1) {
-            pendingRequests.pop();
-            return;
-        }
-
-        // Otherwise, move the last element to the position of the removed element and pop
-        pendingRequests[index] = pendingRequests[pendingRequests.length - 1];
-        pendingRequests.pop();
     }
 
     /// @notice Withdraw assets from the SFC

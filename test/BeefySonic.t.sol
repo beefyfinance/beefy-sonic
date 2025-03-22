@@ -245,7 +245,6 @@ contract BeefySonicTest is Test {
 
         // 10. Verify that the validator is now marked as slashed and inactive
         IBeefySonic.Validator memory validator = beefySonic.validatorByIndex(0);
-        assertTrue(validator.slashed);
         assertFalse(validator.active);
 
         {

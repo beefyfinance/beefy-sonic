@@ -358,21 +358,6 @@ contract BeefySonic is
         }
     }
 
-    // /// @notice Withdraw assets from the vault
-    // /// @param _requestIds Array of request IDs
-    // /// @param _receiver Address to receive the assets
-    // /// @param _controller Controller address
-    // /// @return shares Amount of shares withdrawn
-    // function withdraw(uint256[] memory _requestIds, address _receiver, address _controller)
-    //     external
-    //     returns (uint256 shares)
-    // {
-    //     for (uint256 i; i < _requestIds.length; ++i) {
-    //         (, uint256 _shares) = _processWithdraw(_requestIds[i], _receiver, _controller, false);
-    //         shares += _shares;
-    //     }
-    // }
-
     /// @notice Withdraw assets from the vault
     /// @param _requestId Request ID of the withdrawal
     /// @param _receiver Address to receive the assets
@@ -422,8 +407,7 @@ contract BeefySonic is
         uint256 delegations = validator.delegations;
 
         // Check if the validator is slashed
-        bool _isSlashed = isSlashed(validatorId);
-        if (_isSlashed) {
+        if (isSlashed(validatorId)) {
             // create a withdraw ID
             uint256 wId = $.wId;
             uint256 refundRatio = slashingRefundRatio(validatorId);

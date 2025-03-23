@@ -169,7 +169,7 @@ contract BeefySonic is
         if ($.validators.length == 0) revert NoValidators();
 
         // Get max delegated ratio from the constants manager via the SFC
-        uint256 maxDelegatedRatio = maxDelegateRatio();
+        uint256 _maxDelegatedRatio = maxDelegatedRatio();
 
         // Loop and try to deposit into the first validator in the set with capacity
         for (uint256 i; i < $.validators.length; ++i) {
@@ -303,7 +303,7 @@ contract BeefySonic is
         uint256 currentIndex = 0;
 
         /// Loop and look to see if any validator is slashed, if they are and have enough delegations we allow a request to process in emergency mode
-        for (uint256 i; i < $.validators.length; i++) {
+        for (uint256 i; i < $.validators.length; ++i) {
             Validator storage validator = $.validators[i];
             uint256 validatorId = validator.id;
             uint256 delegations = validator.delegations;
@@ -631,10 +631,10 @@ contract BeefySonic is
         largestCapacity = 0;
 
         // Get max delegated ratio from the constants manager via the SFC
-        uint256 maxDelegatedRatio = maxDelegateRatio();
+        uint256 _maxDelegatedRatio = maxDelegatedRatio();
 
         for (uint256 i; i < $.validators.length; ++i) {
-            uint256 capacity = _delegatedCapacity($.validators[i].id, maxDelegatedRatio);
+            uint256 capacity = _delegatedCapacity($.validators[i].id, _maxDelegatedRatio);
 
             if (capacity > largestCapacity) {
                 largestCapacity = capacity;
@@ -661,7 +661,7 @@ contract BeefySonic is
     function harvest() external whenNotPaused {
         BeefySonicStorage storage $ = getBeefySonicStorage();
 
-        // We just return if the last harvest was within the lock duration to prevent ddos
+        // We just revert if the last harvest was within the lock duration to prevent ddos 
         if (block.timestamp - $.lastHarvest <= $.lockDuration) revert NotReadyForHarvest();
 
         // Claim pending rewards
@@ -676,7 +676,8 @@ contract BeefySonic is
         // Charge fees
         _chargeFees(claimed);
 
-        // Balance of Native on the contract this includes Sonic after fees and donations
+        // Balance of Native on the contract this includes Sonic after fees and donations 
+        // You can technically donate by calling withdrawTo with to being this address on wS
         uint256 contractBalance = address(this).balance;
 
         // Update stored total and total locked
@@ -720,6 +721,7 @@ contract BeefySonic is
     /// @param _amount Amount of assets to charge
     function _chargeFees(uint256 _amount) private {
         BeefySonicStorage storage $ = getBeefySonicStorage();
+        // Get fees .total will never be 0
         uint256 beefyFeeAmount = _amount * IFeeConfig($.beefyFeeConfig).getFees(address(this)).total / 1e18;
         uint256 liquidityFeeAmount = 0;
         if ($.liquidityFee > 0) liquidityFeeAmount = _amount * $.liquidityFee / 1e18;
@@ -731,7 +733,7 @@ contract BeefySonic is
             if (liquidityFeeAmount > 0) IERC20(asset()).safeTransfer($.liquidityFeeRecipient, liquidityFeeAmount);
         }
 
-        emit ChargedFees(_amount, beefyFeeAmount, liquidityFeeAmount);
+        emit ChargedFees(beefyFeeAmount, liquidityFeeAmount);
     }
 
     /// @notice Get validator index by validator ID
@@ -786,8 +788,8 @@ contract BeefySonic is
     }
 
     /// @notice Get the maximum delegate ratio
-    /// @return maxDelegateRatio Maximum delegate ratio
-    function maxDelegateRatio() private view returns (uint256) {
+    /// @return maxDelegatedRatio Maximum delegate ratio
+    function maxDelegatedRatio() private view returns (uint256) {    
         return IConstantsManager(ISFC(getBeefySonicStorage().stakingContract).constsAddress()).maxDelegatedRatio();
     }
 
@@ -900,7 +902,7 @@ contract BeefySonic is
         BeefySonicStorage storage $ = getBeefySonicStorage();
 
         // Check if validator already exists
-        for (uint256 i; i < $.validators.length; i++) {
+        for (uint256 i; i < $.validators.length; ++i) {
             if ($.validators[i].id == _validatorId) revert InvalidValidatorIndex();
         }
 
@@ -914,7 +916,6 @@ contract BeefySonic is
             recoverableAmount: 0,
             slashedDelegations: 0,
             active: true,
-            slashed: false,
             claim: true
         });
 
@@ -942,10 +943,7 @@ contract BeefySonic is
 
         if (_validatorIndex >= $.validators.length) revert InvalidValidatorIndex();
 
-        bool _isSlashed = isSlashed($.validators[_validatorIndex].id);
-
         $.validators[_validatorIndex].active = _active;
-        $.validators[_validatorIndex].slashed = _isSlashed;
         $.validators[_validatorIndex].claim = _shouldClaim;
 
         emit ValidatorStatusChanged(_validatorIndex, _active, _shouldClaim);

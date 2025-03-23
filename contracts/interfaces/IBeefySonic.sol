@@ -55,7 +55,6 @@ interface IBeefySonic {
         uint256 recoverableAmount;
         uint256 slashedDelegations;
         bool active;
-        bool slashed;
         bool claim;
     }
 

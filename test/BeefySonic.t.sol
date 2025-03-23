@@ -161,8 +161,12 @@ contract BeefySonicTest is Test {
         // 1. First deposit funds with a user
         address alice = _deposit(1000e18, "alice");
 
+        uint256 slashingRefundRatio = 0.7e18; // 70% refund
+        uint256 beforeBal = IERC20(want).balanceOf(alice);
+        
         // 2. Request a redemption
         vm.startPrank(alice);
+        uint256 firstWithdrawExpected = beefySonic.convertToAssets(500e18) * slashingRefundRatio / 1e18;
         uint256 requestId = beefySonic.requestRedeem(500e18, alice, alice);
         vm.stopPrank();
 
@@ -180,7 +184,6 @@ contract BeefySonicTest is Test {
         assertTrue(isSlashed);
 
         // Mock the slashing refund ratio (e.g., 70% of funds can be recovered)
-        uint256 slashingRefundRatio = 0.7e18; // 70% refund
         address owner = address(0x69Adb6Bd46852315ADbbfA633d2bbf792CdB3e04);
         vm.startPrank(owner);
         ISFC(stakingContract).updateSlashingRefundRatio(beefyValidatorId, slashingRefundRatio);
@@ -197,6 +200,7 @@ contract BeefySonicTest is Test {
         beefySonic.emergencyWithdraw(requestId, alice, alice);
 
         // 7. Request emergency redeem
+        uint256 secondWithdrawExpected = beefySonic.convertToAssets(100e18) * slashingRefundRatio / 1e18;
         uint256 emergencyRedeemId = beefySonic.requestRedeem(100e18, alice, alice, true);
         vm.stopPrank();
 
@@ -209,8 +213,9 @@ contract BeefySonicTest is Test {
         vm.stopPrank();
 
         // 9. Verify that the user received the slashed amount (70% of original)
-        // uint256 expectedAssets = beefySonic.convertToAssets(600e18) * slashingRefundRatio / 1e18;
-        // assertApproxEqRel(emergencyAssets + assetsWithdrawn, expectedAssets, 0.01e18); // Allow 1% deviation
+        uint256 afterBal = IERC20(want).balanceOf(alice);
+        uint256 expectedAssets = firstWithdrawExpected + secondWithdrawExpected;
+        assertApproxEqRel(afterBal - beforeBal, expectedAssets, 0.01e18); // Allow 1% deviation
 
         vm.startPrank(beefySonic.owner());
 
@@ -242,7 +247,6 @@ contract BeefySonicTest is Test {
 
         // 10. Verify that the validator is now marked as slashed and inactive
         IBeefySonic.Validator memory validator = beefySonic.validatorByIndex(0);
-        assertTrue(validator.slashed);
         assertFalse(validator.active);
 
         {

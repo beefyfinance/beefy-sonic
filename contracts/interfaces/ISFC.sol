@@ -13,7 +13,18 @@ interface ISFC {
 
     function getStake(address, uint256) external view returns (uint256);
 
-    function getValidator(uint256) external view returns (uint256 status, uint256 receivedStake, address auth, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedTime, uint256 deactivatedEpoch);
+    function getValidator(uint256)
+        external
+        view
+        returns (
+            uint256 status,
+            uint256 receivedStake,
+            address auth,
+            uint256 createdEpoch,
+            uint256 createdTime,
+            uint256 deactivatedTime,
+            uint256 deactivatedEpoch
+        );
 
     function delegate(uint256 toValidatorID) external payable;
 

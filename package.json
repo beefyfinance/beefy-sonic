@@ -11,7 +11,8 @@
     "coverage": "forge coverage",
     "coverage:lcov": "forge coverage --report lcov",
     "test:slither": "slither . --config slither.config.json",
-    "test:gambit": "gambit --json gambit.config.json && ./test_mutants.sh",
+    "test:gambit:gen": "./test/mutation/gambit.sh generate ./contracts/BeefySonic.sol",
+    "test:gambit:run": "./test/mutation/gambit.sh test 8",
     "test:sumo": "npx sumo test"
   },
   "devDependencies": {

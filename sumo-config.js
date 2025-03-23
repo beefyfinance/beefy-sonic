@@ -7,6 +7,6 @@ module.exports = {
     testingTimeOutInSec: 10,
     network: "none",
     testingFramework: "forge",
-    minimal: false,
-    tce: false
+    minimal: true,
+    tce: true
   }

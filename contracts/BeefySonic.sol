@@ -185,7 +185,7 @@ contract BeefySonic is
                 continue;
             }
 
-            uint256 delegatedCapacity = _delegatedCapacity(validator.id, maxDelegatedRatio);
+            uint256 delegatedCapacity = _delegatedCapacity(validator.id, _maxDelegatedRatio);
 
             // Check if the validator has available capacity
             if (delegatedCapacity >= _amount) return i;

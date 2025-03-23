@@ -76,7 +76,7 @@ interface IBeefySonic {
 
     event BeefyFeeConfigSet(address indexed oldBeefyFeeConfig, address indexed newBeefyFeeConfig);
     event BeefyFeeRecipientSet(address indexed oldBeefyFeeRecipient, address indexed newBeefyFeeRecipient);
-    event ChargedFees(uint256 amount, uint256 beefyFee, uint256 liquidityFee);
+    event ChargedFees(uint256 beefyFee, uint256 liquidityFee);
     event ClaimedRewards(uint256 amount);
     event KeeperSet(address indexed oldKeeper, address indexed newKeeper);
     event LiquidityFeeRecipientSet(address indexed oldLiquidityFeeRecipient, address indexed newLiquidityFeeRecipient);

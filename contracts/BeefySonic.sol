@@ -87,7 +87,7 @@ contract BeefySonic is
     /// @param _controller Controller address
     function _onlyOperatorOrController(address _controller) private view {
         BeefySonicStorage storage $ = getBeefySonicStorage();
-        if (!$.isOperator[_controller][msg.sender] && _controller != msg.sender) revert NotAuthorized();
+        if (_controller != msg.sender && !$.isOperator[_controller][msg.sender]) revert NotAuthorized();
     }
 
     /// @notice EIP-7540 overload: Deposit assets into the vault

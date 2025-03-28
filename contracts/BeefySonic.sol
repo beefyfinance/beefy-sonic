@@ -227,7 +227,7 @@ contract BeefySonic is
         returns (uint256 requestId)
     {
         BeefySonicStorage storage $ = getBeefySonicStorage();
-        // Ensure the owner is the caller or an authorized operator
+        // Ensure _owner is authorized
         _isAuthorizedOperator(_owner);
 
         // Convert shares to assets

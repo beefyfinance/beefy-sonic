@@ -508,7 +508,8 @@ contract BeefySonicTest is Test {
 
     function test_harvestConstraints() public {
         // Setup: Make a deposit so we have something to harvest
-        _deposit(1000e18, "alice");
+        uint256 maxDeposit = beefySonic.maxDeposit(address(0));
+        _deposit(maxDeposit, "alice");
 
         // Test 1: Should revert when trying to harvest with rewards less than minHarvest
         // We don't advance epochs, so there will be minimal/no rewards
@@ -535,6 +536,23 @@ contract BeefySonicTest is Test {
 
         // Should succeed now
         beefySonic.harvest();
+        uint256 balanceOfSOnContract = address(beefySonic).balance;
+        assertGt(balanceOfSOnContract, 0);
+
+        vm.stopPrank();
+
+        vm.startPrank(beefySonic.owner());
+
+        beefySonic.addValidator(15);
+
+        _advanceEpoch(1);
+
+        vm.warp(block.timestamp + 1 days + 1);
+
+        beefySonic.harvest();
+
+        balanceOfSOnContract = address(beefySonic).balance;
+        assertEq(balanceOfSOnContract, 0);
         vm.stopPrank();
     }
 

@@ -26,7 +26,6 @@ import {BeefySonicStorageUtils} from "../contracts/BeefySonicStorageUtils.sol";
 contract BeefySonic is
     IBeefySonic,
     UUPSUpgradeable,
-    ERC20Upgradeable,
     ERC20PermitUpgradeable,
     ERC4626Upgradeable,
     OwnableUpgradeable,

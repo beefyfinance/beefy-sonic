@@ -423,7 +423,6 @@ contract BeefySonic is
 
             emit ValidatorSlashed(validatorId, recoverableAmount, delegations);
             validator.slashedDelegations = delegations;
-            validator.recoverableAmount = recoverableAmount;
             validator.slashedWId = wId;
             validator.delegations = 0;
             validator.active = false;
@@ -457,7 +456,6 @@ contract BeefySonic is
 
         uint256 loss = validator.slashedDelegations - amountRecovered;
         $.storedTotal -= loss;
-        validator.recoverableAmount = 0;
 
         emit SlashedValidatorWithdrawn(validator.id, amountRecovered, loss);
     }

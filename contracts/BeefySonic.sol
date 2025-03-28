@@ -90,42 +90,6 @@ contract BeefySonic is
         if (!$.isOperator[_controller][msg.sender] && _controller != msg.sender) revert NotAuthorized();
     }
 
-    /// @notice EIP-7540 overload: Deposit assets into the vault
-    /// @param _assets Amount of assets to deposit
-    /// @param _receiver Address of the receiver
-    /// @param _controller Controller address
-    function deposit(uint256 _assets, address _receiver, address _controller)
-        external
-        whenNotPaused
-        returns (uint256)
-    {
-        _onlyOperatorOrController(_controller);
-
-        uint256 maxAssets = maxDeposit(_receiver);
-        if (_assets > maxAssets) revert ERC4626ExceededMaxDeposit(_receiver, _assets, maxAssets);
-
-        uint256 shares = previewDeposit(_assets);
-
-        _deposit(_controller, _receiver, _assets, shares);
-        return shares;
-    }
-
-    /// @notice EIP-7540 overload: Mint shares into the vault
-    /// @param _shares Amount of shares to mint
-    /// @param _receiver Address of the receiver
-    /// @param _controller Controller address
-    function mint(uint256 _shares, address _receiver, address _controller) external whenNotPaused returns (uint256) {
-        _onlyOperatorOrController(_controller);
-
-        uint256 maxShares = maxMint(_receiver);
-        if (_shares > maxShares) revert ERC4626ExceededMaxMint(_receiver, _shares, maxShares);
-
-        uint256 assets = previewMint(_shares);
-
-        _deposit(_controller, _receiver, assets, _shares);
-        return assets;
-    }
-
     /// @notice Deposit assets into the vault
     /// @param _caller Address of the caller
     /// @param _receiver Address of the receiver

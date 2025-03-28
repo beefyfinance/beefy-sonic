@@ -462,11 +462,11 @@ contract BeefySonicTest is Test {
 
         // Test deposit reverts when paused
         vm.expectRevert(encodedError);
-        beefySonic.deposit(1 ether, user, user);
+        beefySonic.deposit(1 ether, user);
 
         // Test mint reverts when paused
         vm.expectRevert(encodedError);
-        beefySonic.mint(1 ether, user, user);
+        beefySonic.mint(1 ether, user);
 
         // Test harvest reverts when paused
         vm.expectRevert(encodedError);
@@ -585,14 +585,14 @@ contract BeefySonicTest is Test {
         beefySonic.deposit(0, user);
 
         uint256 shares = beefySonic.previewDeposit(amount / 2);
-        uint256 assetAmount = beefySonic.mint(shares, user, user);
+        uint256 assetAmount = beefySonic.mint(shares, user);
 
         uint256 bal = amount - assetAmount;
 
         vm.expectRevert(IBeefySonic.ZeroAddress.selector);
-        beefySonic.deposit(bal, address(0), user);
+        beefySonic.deposit(bal, address(0));
 
-        beefySonic.deposit(bal, user, user);
+        beefySonic.deposit(bal, user);
         vm.stopPrank();
     }
 

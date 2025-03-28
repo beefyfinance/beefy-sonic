@@ -83,9 +83,9 @@ contract BeefySonic is
         $.requestId++;
     }
 
-    /// @notice Check if the caller is an authorized operator or owner
+    /// @notice Check if the caller is an authorized operator
     /// @param _controller Controller address
-    function _onlyOperatorOrController(address _controller) private view {
+    function _isAuthorizedOperator(address _controller) private view {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         if (!$.isOperator[_controller][msg.sender] && _controller != msg.sender) revert NotAuthorized();
     }
@@ -99,7 +99,7 @@ contract BeefySonic is
         whenNotPaused
         returns (uint256)
     {
-        _onlyOperatorOrController(_controller);
+        _isAuthorizedOperator(_controller);
 
         uint256 maxAssets = maxDeposit(_receiver);
         if (_assets > maxAssets) revert ERC4626ExceededMaxDeposit(_receiver, _assets, maxAssets);
@@ -115,7 +115,7 @@ contract BeefySonic is
     /// @param _receiver Address of the receiver
     /// @param _controller Controller address
     function mint(uint256 _shares, address _receiver, address _controller) external whenNotPaused returns (uint256) {
-        _onlyOperatorOrController(_controller);
+        _isAuthorizedOperator(_controller);
 
         uint256 maxShares = maxMint(_receiver);
         if (_shares > maxShares) revert ERC4626ExceededMaxMint(_receiver, _shares, maxShares);
@@ -228,7 +228,7 @@ contract BeefySonic is
     {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         // Ensure the owner is the caller or an authorized operator
-        _onlyOperatorOrController(_owner);
+        _isAuthorizedOperator(_owner);
 
         // Convert shares to assets
         uint256 assets = convertToAssets(_shares);
@@ -473,7 +473,7 @@ contract BeefySonic is
     {
         BeefySonicStorage storage $ = getBeefySonicStorage();
 
-        _onlyOperatorOrController(_controller);
+        _isAuthorizedOperator(_controller);
 
         RedemptionRequest storage _request = $.pendingRedemptions[_controller][_requestId];
 

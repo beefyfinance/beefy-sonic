@@ -403,6 +403,7 @@ contract BeefySonic is
     function checkForSlashedValidatorsAndUndelegate(uint256 validatorIndex) external onlyOwner {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         Validator storage validator = $.validators[validatorIndex];
+        if (validator.slashedDelegations > 0) revert SlashingInProcess();
         uint256 validatorId = validator.id;
         uint256 delegations = validator.delegations;
 
@@ -458,6 +459,7 @@ contract BeefySonic is
         uint256 loss = validator.slashedDelegations - amountRecovered;
         $.storedTotal -= loss;
         validator.recoverableAmount = 0;
+        validator.slashedDelegations = 0;
 
         emit SlashedValidatorWithdrawn(validator.id, amountRecovered, loss);
     }

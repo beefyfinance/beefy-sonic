@@ -69,6 +69,7 @@ interface IBeefySonic {
     error NotOK();
     error NotReadyForHarvest();
     error NothingToWithdraw();
+    error SlashingInProcess();
     error ValidatorNotFound();
     error WithdrawError();
     error ZeroDeposit();

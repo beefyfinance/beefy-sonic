@@ -1053,7 +1053,7 @@ contract BeefySonic is
     function supportsInterface(bytes4 interfaceId) external pure returns (bool supported) {
         if (
             interfaceId == 0xe3bc4e65 || interfaceId == 0x620ee8e4 || interfaceId == 0x2f0a18c5
-                || interfaceId == 0x01ffc9a7
+                || interfaceId == 0x01ffc9a7 || interfaceId == 0x36372b07
         ) return true;
         return false;
     }

@@ -1000,22 +1000,22 @@ contract BeefySonic is
     function setKeeper(address _keeper) external onlyOwner {
         _NoZeroAddress(_keeper);
         BeefySonicStorage storage $ = getBeefySonicStorage();
-        $.keeper = _keeper;
         emit KeeperSet($.keeper, _keeper);
+        $.keeper = _keeper;
     }
 
     /// @notice Set the lock duration
     /// @param _lockDuration Duration of the lock
     function setLockDuration(uint32 _lockDuration) external onlyOwner {
         BeefySonicStorage storage $ = getBeefySonicStorage();
-        $.lockDuration = _lockDuration;
         emit LockDurationSet($.lockDuration, _lockDuration);
+        $.lockDuration = _lockDuration;
     }
 
     function setMinHarvest(uint256 _minHarvest) external onlyOwner {
         BeefySonicStorage storage $ = getBeefySonicStorage();
-        $.minHarvest = _minHarvest;
         emit MinHarvestSet($.minHarvest, _minHarvest);
+        $.minHarvest = _minHarvest;
     }
 
     /// @notice Pause the contract only callable by the owner or keeper

@@ -710,7 +710,7 @@ contract BeefySonic is
                 uint256 pending = ISFC($.stakingContract).pendingRewards(address(this), validator.id);
                 if (pending > 0) ISFC($.stakingContract).claimRewards(validator.id);
 
-                // we claimed remaining rewards and now set it to claim to false
+                // We claimed remaining rewards for inactive validator and now set shouldClaim to false
                 (bool isOk,) = _validatorStatus(validator.id);
                 if (!isOk) _setValidatorStatus(i, false, false);
             }

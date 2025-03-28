@@ -137,6 +137,7 @@ contract BeefySonic is
         whenNotPaused
     {
         BeefySonicStorage storage $ = getBeefySonicStorage();
+        if ($.slashNotRealized) revert SlashNotRealized();
         _NoZeroAddress(_receiver);
 
         // We dont allow deposits of 0
@@ -427,6 +428,8 @@ contract BeefySonic is
             validator.slashedWId = wId;
             validator.delegations = 0;
             validator.active = false;
+
+            $.slashNotRealized = true;
         }
     }
 
@@ -458,6 +461,7 @@ contract BeefySonic is
         uint256 loss = validator.slashedDelegations - amountRecovered;
         $.storedTotal -= loss;
         validator.recoverableAmount = 0;
+        $.slashNotRealized = false;
 
         emit SlashedValidatorWithdrawn(validator.id, amountRecovered, loss);
     }

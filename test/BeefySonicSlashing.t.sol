@@ -222,6 +222,18 @@ contract BeefySonicSlashingTest is Test {
         // harvest
         beefySonic.harvest();
 
+        address charlie = makeAddr("charlie");
+        deal(want, charlie, 1000e18);
+        vm.startPrank(charlie);
+
+        IERC20(want).approve(address(beefySonic), 1000e18);
+
+        vm.expectRevert(IBeefySonic.SlashNotRealized.selector);
+        beefySonic.deposit(1000e18, charlie, charlie);
+        vm.stopPrank();
+
+        vm.startPrank(beefySonic.owner());
+
         // Complete slashed validator withdrawals
         uint256 recoveredAmount = 0;
         recoveredAmount += beefySonic.completeSlashedValidatorWithdraw(0);

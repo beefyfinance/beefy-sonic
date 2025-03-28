@@ -266,13 +266,13 @@ contract BeefySonic is
             $.wId++;
         }
 
-        uint32 claimableTimestamp = uint32(block.timestamp + withdrawDuration());
+        uint32 requestTimestamp = uint32(block.timestamp);
 
         // Store the request
         $.pendingRedemptions[_controller][requestId] = RedemptionRequest({
             assets: assets,
             shares: _shares,
-            claimableTimestamp: claimableTimestamp,
+            requestTimestamp: requestTimestamp,
             emergency: _emergency,
             withdrawalIds: withdrawalIds,
             validatorIds: validatorIds
@@ -281,7 +281,7 @@ contract BeefySonic is
         // Add the request ID to the owner's pending requests
         $.pendingRequests[_controller].push(requestId);
 
-        emit RedeemRequest(_controller, _owner, requestId, msg.sender, _shares, claimableTimestamp);
+        emit RedeemRequest(_controller, _owner, requestId, msg.sender, _shares, requestTimestamp);
         return requestId;
     }
 
@@ -479,7 +479,7 @@ contract BeefySonic is
 
         _NoZeroAddress(_receiver);
         // Ensure the request is claimable
-        if (_request.claimableTimestamp > block.timestamp) revert NotClaimableYet();
+        if (_request.requestTimestamp + withdrawDuration() > block.timestamp) revert NotClaimableYet();
 
         // Withdraw assets from the SFC
         uint256 amountWithdrawn = _withdrawFromSFC(_requestId, _controller);
@@ -590,7 +590,7 @@ contract BeefySonic is
         RedemptionRequest storage request = $.pendingRedemptions[_controller][_requestId];
 
         // Return the shares if the request is pending
-        if (request.claimableTimestamp > block.timestamp) return request.shares;
+        if (request.requestTimestamp + withdrawDuration() > block.timestamp) return request.shares;
         return 0;
     }
 
@@ -603,7 +603,7 @@ contract BeefySonic is
         RedemptionRequest storage request = $.pendingRedemptions[_controller][_requestId];
 
         // Return the shares if the request is claimable
-        if (request.claimableTimestamp <= block.timestamp) return request.shares;
+        if (request.requestTimestamp + withdrawDuration() <= block.timestamp) return request.shares;
         return 0;
     }
 

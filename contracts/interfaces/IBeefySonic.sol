@@ -29,6 +29,8 @@ interface IBeefySonic {
         uint256 wId;
         // Minimum harvest amount
         uint256 minHarvest;
+        // Slash not realized
+        bool slashNotRealized;
         // Operator tracking
         mapping(address => mapping(address => bool)) isOperator;
         // Redemption requests
@@ -69,6 +71,7 @@ interface IBeefySonic {
     error NotOK();
     error NotReadyForHarvest();
     error NothingToWithdraw();
+error SlashNotRealized();
     error ValidatorNotFound();
     error WithdrawError();
     error ZeroDeposit();

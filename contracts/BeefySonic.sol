@@ -799,6 +799,12 @@ contract BeefySonic is
         return getBeefySonicStorage().validators.length;
     }
 
+    /// @notice Get the total locked amount
+    /// @return totalLocked Total locked amount
+    function totalLocked() external view returns (uint256) {
+        return getBeefySonicStorage().totalLocked;
+    }
+
     /// @notice Get the last harvest timestamp
     /// @return lastHarvest Last harvest timestamp
     function lastHarvest() external view returns (uint256) {

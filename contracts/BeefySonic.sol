@@ -799,6 +799,12 @@ contract BeefySonic is
         return getBeefySonicStorage().validators.length;
     }
 
+    /// @notice Get the last harvest timestamp
+    /// @return lastHarvest Last harvest timestamp
+    function lastHarvest() external view returns (uint256) {
+        return getBeefySonicStorage().lastHarvest;
+    }
+
     /// @notice Get the rate used by Balancer
     /// @return rate Rate
     function getRate() external view returns (uint256) {

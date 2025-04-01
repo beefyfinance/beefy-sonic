@@ -29,8 +29,8 @@ interface IBeefySonic {
         uint256 wId;
         // Minimum harvest amount
         uint256 minHarvest;
-        // Slash not realized
-        bool slashNotRealized;
+        // Slashed validators
+        uint256 slashedValidators;
         // Operator tracking
         mapping(address => mapping(address => bool)) isOperator;
         // Redemption requests

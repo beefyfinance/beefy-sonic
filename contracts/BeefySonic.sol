@@ -243,7 +243,8 @@ contract BeefySonic is
             requestTimestamp: requestTimestamp,
             emergency: _emergency,
             withdrawalIds: withdrawalIds,
-            validatorIds: validatorIds
+            validatorIds: validatorIds,
+            requestId: requestId
         });
 
         // Add the request ID to the owner's pending requests

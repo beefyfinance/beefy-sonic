@@ -50,6 +50,7 @@ interface IBeefySonic {
         bool emergency;
         uint256[] withdrawalIds;
         uint256[] validatorIds;
+        uint256 requestId;
     }
 
     struct Validator {

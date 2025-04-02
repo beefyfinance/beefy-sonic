@@ -44,7 +44,7 @@ interface IBeefySonic {
     struct RedemptionRequest {
         uint256 assets;
         uint256 shares;
-        uint32 claimableTimestamp;
+        uint32 requestTimestamp;
         bool emergency;
         uint256[] withdrawalIds;
         uint256[] validatorIds;
@@ -92,7 +92,7 @@ interface IBeefySonic {
         uint256 requestId,
         address indexed caller,
         uint256 shares,
-        uint32 claimableTimestamp
+        uint32 requestTimestamp
     );
     event SlashedValidatorWithdrawn(uint256 indexed validatorId, uint256 amountRecovered, uint256 loss);
     event ValidatorAdded(uint256 validatorId, uint256 validatorIndex);

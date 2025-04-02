@@ -276,6 +276,7 @@ contract BeefySonic is
             uint256 validatorId = validator.id;
             uint256 delegations = validator.delegations;
             if (isSlashed(validatorId)) {
+                if ($.slashNotRealized) revert SlashNotRealized();
                 if (delegations == 0) continue;
                 // brick redeem requests unless via emergency
                 if (!_emergency) revert WithdrawError();

@@ -166,7 +166,7 @@ contract BeefySonicSlashingTest is Test {
         deal(want, user, 1000e18);
         IERC20(want).approve(address(beefySonic), 1000e18);
         vm.expectRevert(IBeefySonic.SlashNotRealized.selector);
-        beefySonic.deposit(1000e18, user, user);
+        beefySonic.deposit(1000e18, user);
         vm.stopPrank();
 
         // Process slashing recovery
@@ -271,7 +271,7 @@ contract BeefySonicSlashingTest is Test {
         IERC20(want).approve(address(beefySonic), 1000e18);
 
         vm.expectRevert(IBeefySonic.SlashNotRealized.selector);
-        beefySonic.deposit(1000e18, charlie, charlie);
+        beefySonic.deposit(1000e18, charlie);
         vm.stopPrank();
 
         vm.startPrank(beefySonic.owner());

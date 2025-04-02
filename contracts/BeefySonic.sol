@@ -86,7 +86,7 @@ contract BeefySonic is
     /// @param _controller Controller address
     function _isAuthorizedOperator(address _controller) private view {
         BeefySonicStorage storage $ = getBeefySonicStorage();
-        if (!$.isOperator[_controller][msg.sender] && _controller != msg.sender) revert NotAuthorized();
+        if (_controller != msg.sender && !$.isOperator[_controller][msg.sender]) revert NotAuthorized();
     }
 
     /// @notice Deposit assets into the vault

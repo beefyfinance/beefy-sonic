@@ -29,6 +29,8 @@ interface IBeefySonic {
         uint256 wId;
         // Minimum harvest amount
         uint256 minHarvest;
+        // Undelegated harvest amount
+        uint256 undelegatedHarvest;
         // Operator tracking
         mapping(address => mapping(address => bool)) isOperator;
         // Redemption requests

@@ -90,42 +90,6 @@ contract BeefySonic is
         if (!$.isOperator[_controller][msg.sender] && _controller != msg.sender) revert NotAuthorized();
     }
 
-    /// @notice EIP-7540 overload: Deposit assets into the vault
-    /// @param _assets Amount of assets to deposit
-    /// @param _receiver Address of the receiver
-    /// @param _controller Controller address
-    function deposit(uint256 _assets, address _receiver, address _controller)
-        external
-        whenNotPaused
-        returns (uint256)
-    {
-        _isAuthorizedOperator(_controller);
-
-        uint256 maxAssets = maxDeposit(_receiver);
-        if (_assets > maxAssets) revert ERC4626ExceededMaxDeposit(_receiver, _assets, maxAssets);
-
-        uint256 shares = previewDeposit(_assets);
-
-        _deposit(_controller, _receiver, _assets, shares);
-        return shares;
-    }
-
-    /// @notice EIP-7540 overload: Mint shares into the vault
-    /// @param _shares Amount of shares to mint
-    /// @param _receiver Address of the receiver
-    /// @param _controller Controller address
-    function mint(uint256 _shares, address _receiver, address _controller) external whenNotPaused returns (uint256) {
-        _isAuthorizedOperator(_controller);
-
-        uint256 maxShares = maxMint(_receiver);
-        if (_shares > maxShares) revert ERC4626ExceededMaxMint(_receiver, _shares, maxShares);
-
-        uint256 assets = previewMint(_shares);
-
-        _deposit(_controller, _receiver, assets, _shares);
-        return assets;
-    }
-
     /// @notice Deposit assets into the vault
     /// @param _caller Address of the caller
     /// @param _receiver Address of the receiver
@@ -144,6 +108,7 @@ contract BeefySonic is
 
         // Delegate assets to the validator only if a single validator can handle the deposit amount
         uint256 validatorIndex = _getValidatorToDeposit(_assets);
+        if (validatorIndex == type(uint256).max) revert NoValidatorsWithCapacity();
 
         // Update validator delegations and stored total
         $.validators[validatorIndex].delegations += _assets;
@@ -191,8 +156,8 @@ contract BeefySonic is
             if (delegatedCapacity >= _amount) return i;
         }
 
-        // No validators with capacity
-        revert NoValidatorsWithCapacity();
+        // No validators with capacity so issue a large number to not collide
+        validatorId = type(uint256).max;
     }
 
     /// @notice Request a redeem with emergency flag
@@ -453,6 +418,7 @@ contract BeefySonic is
 
             // deposit the recovered amount to another validator
             uint256 depositValidatorIndex = _getValidatorToDeposit(amountRecovered);
+            if (depositValidatorIndex == type(uint256).max) revert NoValidatorsWithCapacity();
             $.validators[depositValidatorIndex].delegations += amountRecovered;
             ISFC($.stakingContract).delegate{value: amountRecovered}($.validators[depositValidatorIndex].id);
         }
@@ -680,7 +646,7 @@ contract BeefySonic is
 
         // Balance of Native on the contract this includes Sonic after fees and donations 
         // You can technically donate by calling withdrawTo with to being this address on wS
-        uint256 contractBalance = address(this).balance;
+        uint256 contractBalance = address(this).balance - $.undelegatedHarvest;
 
         // Update stored total and total locked
         $.totalLocked = lockedProfit() + contractBalance;
@@ -688,16 +654,19 @@ contract BeefySonic is
         $.lastHarvest = block.timestamp;
 
         // Get validator to deposit
-        uint256 validatorId = _getValidatorToDeposit(contractBalance);
+        uint256 validatorId = _getValidatorToDeposit(contractBalance + $.undelegatedHarvest);
+        if (validatorId == type(uint256).max) $.undelegatedHarvest += contractBalance;
+        else {
+            // Get validator from storage
+            Validator storage validator = $.validators[validatorId];
 
-        // Get validator from storage
-        Validator storage validator = $.validators[validatorId];
+            // Update delegations
+            validator.delegations += contractBalance + $.undelegatedHarvest;
 
-        // Update delegations
-        validator.delegations += contractBalance;
-
-        // Delegate assets to the validator only if a single validator can handle the deposit amount
-        ISFC($.stakingContract).delegate{value: contractBalance}(validator.id);
+            // Delegate assets to the validator only if a single validator can handle the deposit amount
+            ISFC($.stakingContract).delegate{value: contractBalance + $.undelegatedHarvest}(validator.id);
+            $.undelegatedHarvest = 0;
+        }
 
         emit Notify(msg.sender, contractBalance);
     }

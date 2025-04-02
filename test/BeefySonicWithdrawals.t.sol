@@ -325,13 +325,34 @@ contract BeefySonicWithdrawalsTest is Test {
         assertEq(beefySonic.pendingRedeemRequest(request3, alice), 0);
     }
 
+    function test_ApprovalRedeem() public {
+        // 1. Setup withdrawal request
+        address alice = _deposit(1000e18, "alice");
+        address bob = makeAddr("bob");
+
+        vm.startPrank(alice);
+        beefySonic.approve(bob, 500e18);
+        vm.stopPrank();
+        
+        vm.startPrank(bob);
+        vm.expectRevert();
+        beefySonic.requestRedeem(600e18, bob, alice);
+
+        uint256 requestId = beefySonic.requestRedeem(500e18, bob, alice);
+        vm.stopPrank();
+
+        // 2. Verify initial request state
+        assertEq(beefySonic.pendingRedeemRequest(requestId, bob), 500e18, "Request should be tracked");
+        assertEq(beefySonic.claimableRedeemRequest(requestId, bob), 0, "Request should not be claimable initially");
+    }
+
     // Helper functions
     function _deposit(uint256 amount, string memory _name) internal returns (address user) {
         user = makeAddr(_name);
         vm.startPrank(user);
         deal(want, user, amount);
         IERC20(want).approve(address(beefySonic), amount);
-        beefySonic.deposit(amount, user, user);
+        beefySonic.deposit(amount, user);
         vm.stopPrank();
     }
 

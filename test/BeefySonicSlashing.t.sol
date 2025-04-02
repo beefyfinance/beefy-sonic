@@ -146,6 +146,48 @@ contract BeefySonicSlashingTest is Test {
         assertTrue(validator.delegations > 0, "Funds not redistributed to second validator");
     }
 
+
+    function test_SlashedThenDeposit() public {
+         // Setup multiple validators
+        vm.startPrank(beefySonic.owner());
+        beefySonic.addValidator(secondValidatorId);
+        beefySonic.addValidator(13); // Third validator
+        vm.stopPrank();
+
+        // Initial deposits
+        _deposit(3000e18, "alice");
+
+        // Slash first validator
+        _simulateSlashing(beefyValidatorId, 0.7e18);
+
+        // Should revert due to slashed validator
+        address user = makeAddr("bob");
+        vm.startPrank(user);
+        deal(want, user, 1000e18);
+        IERC20(want).approve(address(beefySonic), 1000e18);
+        vm.expectRevert(IBeefySonic.SlashNotRealized.selector);
+        beefySonic.deposit(1000e18, user, user);
+        vm.stopPrank();
+
+        // Process slashing recovery
+        vm.startPrank(beefySonic.owner());
+        beefySonic.checkForSlashedValidatorsAndUndelegate(0);
+
+        // Advance time for withdrawal period
+        vm.warp(block.timestamp + 14 days + 1);
+        _advanceEpoch(4);
+
+        // Complete slashed validator withdrawal
+        beefySonic.completeSlashedValidatorWithdraw(0);
+        vm.stopPrank();
+
+        bool isActive = beefySonic.validatorByIndex(0).active;
+        assertFalse(isActive, "Validator should be inactive after recovery");
+
+        // Should not revert due to slashed validator
+        _deposit(1000e18, "bob");
+    }
+
     function test_MultipleSlashingScenarios() public {
         // Setup multiple validators
         vm.startPrank(beefySonic.owner());
@@ -222,6 +264,18 @@ contract BeefySonicSlashingTest is Test {
         // harvest
         beefySonic.harvest();
 
+        address charlie = makeAddr("charlie");
+        deal(want, charlie, 1000e18);
+        vm.startPrank(charlie);
+
+        IERC20(want).approve(address(beefySonic), 1000e18);
+
+        vm.expectRevert(IBeefySonic.SlashNotRealized.selector);
+        beefySonic.deposit(1000e18, charlie, charlie);
+        vm.stopPrank();
+
+        vm.startPrank(beefySonic.owner());
+
         // Complete slashed validator withdrawals
         uint256 recoveredAmount = 0;
         recoveredAmount += beefySonic.completeSlashedValidatorWithdraw(0);
@@ -282,7 +336,7 @@ contract BeefySonicSlashingTest is Test {
         vm.startPrank(user);
         deal(want, user, amount);
         IERC20(want).approve(address(beefySonic), amount);
-        beefySonic.deposit(amount, user, user);
+        beefySonic.deposit(amount, user);
         vm.stopPrank();
     }
 

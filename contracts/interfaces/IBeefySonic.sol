@@ -29,6 +29,10 @@ interface IBeefySonic {
         uint256 wId;
         // Minimum harvest amount
         uint256 minHarvest;
+        // Slashed validators
+        uint256 slashedValidators;
+        // Undelegated harvest amount
+        uint256 undelegatedHarvest;
         // Operator tracking
         mapping(address => mapping(address => bool)) isOperator;
         // Redemption requests
@@ -42,7 +46,7 @@ interface IBeefySonic {
     struct RedemptionRequest {
         uint256 assets;
         uint256 shares;
-        uint32 claimableTimestamp;
+        uint32 requestTimestamp;
         bool emergency;
         uint256[] withdrawalIds;
         uint256[] validatorIds;
@@ -52,7 +56,6 @@ interface IBeefySonic {
         uint256 id;
         uint256 delegations;
         uint256 slashedWId;
-        uint256 recoverableAmount;
         uint256 slashedDelegations;
         bool active;
         bool claim;
@@ -69,7 +72,7 @@ interface IBeefySonic {
     error NotOK();
     error NotReadyForHarvest();
     error NothingToWithdraw();
-    error SlashingInProcess();
+    error SlashNotRealized();
     error ValidatorNotFound();
     error WithdrawError();
     error ZeroDeposit();
@@ -92,7 +95,7 @@ interface IBeefySonic {
         uint256 requestId,
         address indexed caller,
         uint256 shares,
-        uint32 claimableTimestamp
+        uint32 requestTimestamp
     );
     event SlashedValidatorWithdrawn(uint256 indexed validatorId, uint256 amountRecovered, uint256 loss);
     event ValidatorAdded(uint256 validatorId, uint256 validatorIndex);

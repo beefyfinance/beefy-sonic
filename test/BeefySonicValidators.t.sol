@@ -118,7 +118,7 @@ contract BeefySonicValidatorsTest is Test {
         deal(want, bob, maxDeposit + 1e18);
         IERC20(want).approve(address(beefySonic), maxDeposit + 1e18);
         vm.expectRevert();
-        beefySonic.deposit(maxDeposit + 1e18, bob, bob);
+        beefySonic.deposit(maxDeposit + 1e18, bob);
         vm.stopPrank();
     }
 
@@ -228,7 +228,7 @@ contract BeefySonicValidatorsTest is Test {
         vm.startPrank(user);
         deal(want, user, amount);
         IERC20(want).approve(address(beefySonic), amount);
-        beefySonic.deposit(amount, user, user);
+        beefySonic.deposit(amount, user);
         vm.stopPrank();
     }
 

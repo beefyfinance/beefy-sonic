@@ -83,9 +83,9 @@ contract BeefySonic is
         $.requestId++;
     }
 
-    /// @notice Check if the caller is an authorized operator or owner
+    /// @notice Check if the caller is an authorized operator
     /// @param _controller Controller address
-    function _onlyOperatorOrController(address _controller) private view {
+    function _isAuthorizedOperator(address _controller) private view {
         BeefySonicStorage storage $ = getBeefySonicStorage();
         if (!$.isOperator[_controller][msg.sender] && _controller != msg.sender) revert NotAuthorized();
     }
@@ -99,7 +99,7 @@ contract BeefySonic is
         whenNotPaused
         returns (uint256)
     {
-        _onlyOperatorOrController(_controller);
+        _isAuthorizedOperator(_controller);
 
         uint256 maxAssets = maxDeposit(_receiver);
         if (_assets > maxAssets) revert ERC4626ExceededMaxDeposit(_receiver, _assets, maxAssets);
@@ -115,7 +115,7 @@ contract BeefySonic is
     /// @param _receiver Address of the receiver
     /// @param _controller Controller address
     function mint(uint256 _shares, address _receiver, address _controller) external whenNotPaused returns (uint256) {
-        _onlyOperatorOrController(_controller);
+        _isAuthorizedOperator(_controller);
 
         uint256 maxShares = maxMint(_receiver);
         if (_shares > maxShares) revert ERC4626ExceededMaxMint(_receiver, _shares, maxShares);
@@ -230,7 +230,7 @@ contract BeefySonic is
 
         if (allowance(_owner, _controller) >= _shares)  _spendAllowance(_owner, _controller, _shares);
         // Ensure the owner is the caller or an authorized operator
-        else _onlyOperatorOrController(_owner);
+        else _isAuthorizedOperator(_owner);
 
         // Convert shares to assets
         uint256 assets = convertToAssets(_shares);
@@ -475,7 +475,7 @@ contract BeefySonic is
     {
         BeefySonicStorage storage $ = getBeefySonicStorage();
 
-        _onlyOperatorOrController(_controller);
+        _isAuthorizedOperator(_controller);
 
         RedemptionRequest storage _request = $.pendingRedemptions[_controller][_requestId];
 
@@ -712,7 +712,7 @@ contract BeefySonic is
                 uint256 pending = ISFC($.stakingContract).pendingRewards(address(this), validator.id);
                 if (pending > 0) ISFC($.stakingContract).claimRewards(validator.id);
 
-                // we claimed remaining rewards and now set it to claim to false
+                // We claimed remaining rewards for inactive validator and now set shouldClaim to false
                 (bool isOk,) = _validatorStatus(validator.id);
                 if (!isOk) _setValidatorStatus(i, false, false);
             }
@@ -799,6 +799,18 @@ contract BeefySonic is
     /// @return _length Number of validators
     function validatorsLength() external view returns (uint256) {
         return getBeefySonicStorage().validators.length;
+    }
+
+    /// @notice Get the total locked amount
+    /// @return totalLocked Total locked amount
+    function totalLocked() external view returns (uint256) {
+        return getBeefySonicStorage().totalLocked;
+    }
+
+    /// @notice Get the last harvest timestamp
+    /// @return lastHarvest Last harvest timestamp
+    function lastHarvest() external view returns (uint256) {
+        return getBeefySonicStorage().lastHarvest;
     }
 
     /// @notice Get the rate used by Balancer

@@ -204,6 +204,7 @@ contract BeefySonic is
 
         requestId = $.requestId;
         $.requestId++;
+        $.storedTotal -= assets;
 
         // Get validators to withdraw from will be multiple if the amount is too large
         (uint256[] memory validatorIds, uint256[] memory amounts) = _getValidatorsToWithdraw(assets, _emergency);
@@ -226,7 +227,6 @@ contract BeefySonic is
 
             // Update validator delegations and stored total
             $.validators[validatorIndex].delegations -= amounts[i];
-            $.storedTotal -= amounts[i];
 
             // Increment wId
             $.wId++;

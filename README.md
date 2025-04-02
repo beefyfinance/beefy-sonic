@@ -2,6 +2,10 @@
 
 BeefySonic is a liquid staking solution for Sonic tokens on the Sonic network, developed by Beefy. It allows users to stake their Sonic tokens while maintaining liquidity through a tokenized representation (beS) that earns staking rewards.
 
+## Deployment
+
+The contract is deployed at [0x871A101Dcf22fE4fE37be7B654098c801CBA1c88](https://sonicscan.org/address/0x871A101Dcf22fE4fE37be7B654098c801CBA1c88). The implementation contract is deployed at [0x03360fe329F44c6B0bE4d8C89D2fd4c0151b226E](https://sonicscan.org/address/0x03360fe329F44c6B0bE4d8C89D2fd4c0151b226E).
+
 ## Overview
 
 BeefySonic enables users to:

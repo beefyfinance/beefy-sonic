@@ -462,11 +462,11 @@ contract BeefySonicTest is Test {
 
         // Test deposit reverts when paused
         vm.expectRevert(encodedError);
-        beefySonic.deposit(1 ether, user, user);
+        beefySonic.deposit(1 ether, user);
 
         // Test mint reverts when paused
         vm.expectRevert(encodedError);
-        beefySonic.mint(1 ether, user, user);
+        beefySonic.mint(1 ether, user);
 
         // Test harvest reverts when paused
         vm.expectRevert(encodedError);
@@ -508,7 +508,8 @@ contract BeefySonicTest is Test {
 
     function test_harvestConstraints() public {
         // Setup: Make a deposit so we have something to harvest
-        _deposit(1000e18, "alice");
+        uint256 maxDeposit = beefySonic.maxDeposit(address(0));
+        _deposit(maxDeposit, "alice");
 
         // Test 1: Should revert when trying to harvest with rewards less than minHarvest
         // We don't advance epochs, so there will be minimal/no rewards
@@ -535,6 +536,23 @@ contract BeefySonicTest is Test {
 
         // Should succeed now
         beefySonic.harvest();
+        uint256 balanceOfSOnContract = address(beefySonic).balance;
+        assertGt(balanceOfSOnContract, 0);
+
+        vm.stopPrank();
+
+        vm.startPrank(beefySonic.owner());
+
+        beefySonic.addValidator(15);
+
+        _advanceEpoch(1);
+
+        vm.warp(block.timestamp + 1 days + 1);
+
+        beefySonic.harvest();
+
+        balanceOfSOnContract = address(beefySonic).balance;
+        assertEq(balanceOfSOnContract, 0);
         vm.stopPrank();
     }
 
@@ -585,14 +603,14 @@ contract BeefySonicTest is Test {
         beefySonic.deposit(0, user);
 
         uint256 shares = beefySonic.previewDeposit(amount / 2);
-        uint256 assetAmount = beefySonic.mint(shares, user, user);
+        uint256 assetAmount = beefySonic.mint(shares, user);
 
         uint256 bal = amount - assetAmount;
 
         vm.expectRevert(IBeefySonic.ZeroAddress.selector);
-        beefySonic.deposit(bal, address(0), user);
+        beefySonic.deposit(bal, address(0));
 
-        beefySonic.deposit(bal, user, user);
+        beefySonic.deposit(bal, user);
         vm.stopPrank();
     }
 

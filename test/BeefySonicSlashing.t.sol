@@ -336,7 +336,7 @@ contract BeefySonicSlashingTest is Test {
         vm.startPrank(user);
         deal(want, user, amount);
         IERC20(want).approve(address(beefySonic), amount);
-        beefySonic.deposit(amount, user, user);
+        beefySonic.deposit(amount, user);
         vm.stopPrank();
     }
 

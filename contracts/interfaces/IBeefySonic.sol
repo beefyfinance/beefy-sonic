@@ -29,6 +29,8 @@ interface IBeefySonic {
         uint256 wId;
         // Minimum harvest amount
         uint256 minHarvest;
+        // Slashed validators
+        uint256 slashedValidators;
         // Undelegated harvest amount
         uint256 undelegatedHarvest;
         // Operator tracking
@@ -70,6 +72,7 @@ interface IBeefySonic {
     error NotOK();
     error NotReadyForHarvest();
     error NothingToWithdraw();
+    error SlashNotRealized();
     error ValidatorNotFound();
     error WithdrawError();
     error ZeroDeposit();

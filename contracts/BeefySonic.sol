@@ -743,6 +743,14 @@ contract BeefySonic is
         locked = $.totalLocked * remaining / _lockDuration;
     }
 
+    /**
+     * @notice get all the fees from the fee config for this contract
+     * @return IFeeConfig.AllFees The fees
+     */
+    function getAllFees() external view returns (IFeeConfig.AllFees memory) {
+        return IFeeConfig.AllFees(IFeeConfig(getBeefySonicStorage().beefyFeeConfig).getFees(address(this)), 0, 0);
+    }
+
     /// @notice Get the slashing refund ratio of a validator
     /// @param _validatorId ID of the validator
     /// @return slashingRefundRatio Slashing refund ratio

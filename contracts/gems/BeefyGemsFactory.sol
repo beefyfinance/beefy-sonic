@@ -76,6 +76,7 @@ contract BeefyGemsFactory is Ownable {
     function openSeasonRedemption(uint256 seasonNum) external payable onlyOwner {
         Season storage season = seasons[seasonNum - 1];
         if (season.amountOfS > 0) revert SeasonAlreadyOpen();
+        if (msg.value == 0) revert NotEnoughS();
         season.amountOfS = msg.value;
 
         emit OpenSeason(seasonNum, season.amountOfS);

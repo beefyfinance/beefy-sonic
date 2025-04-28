@@ -81,6 +81,8 @@ contract BeefyGemsFactory is Ownable {
         emit OpenSeason(seasonNum, season.amountOfS);
     }
 
+    /// @notice Top up a season with more S
+    /// @param seasonNum Season number
     function topUpSeason(uint256 seasonNum) external payable onlyOwner {
         Season storage season = seasons[seasonNum - 1];
         season.amountOfS += msg.value;

@@ -43,9 +43,12 @@ contract BeefyGemsFactory is Ownable {
 
         address gems = Clones.clone(address(instance));
 
+        string memory name = string.concat("Beefy Gems Season ", Strings.toString(seasonNum));
+        string memory symbol = string.concat("beGEMS", Strings.toString(seasonNum));
+
         BeefyGems(gems).initialize(
-            string(abi.encodePacked("Beefy Gems Season ", seasonNum)),
-            string(abi.encodePacked("beGEMS", seasonNum)),
+            name,
+            symbol,
             treasury,
             _amountOfGems
         );

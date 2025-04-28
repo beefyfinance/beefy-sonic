@@ -11,7 +11,7 @@ import {IBeefyGemsFactory} from "../interfaces/IBeefyGemsFactory.sol";
 contract BeefyGems is ERC20Upgradeable, OwnableUpgradeable {
 
     address private factory;
-    uint256 private season;
+    uint256 private _seasonNum;
 
     /// @notice Initialize the contract
     /// @param _name Name of the token
@@ -29,14 +29,14 @@ contract BeefyGems is ERC20Upgradeable, OwnableUpgradeable {
         __ERC20_init(_name, _symbol);
         __Ownable_init(msg.sender);
         factory = msg.sender;
-        season = _season;
+        _seasonNum = _season;
         _mint(_treasury, _amount);
     }
 
     /// @notice Redeem gems for S
     /// @param _amount Amount of gems to redeem
     function redeem(uint256 _amount) external {
-        IBeefyGemsFactory(factory).redeem(season, _amount, msg.sender);
+        IBeefyGemsFactory(factory).redeem(_seasonNum, _amount, msg.sender);
     }
 
     /// @notice Burn gems
@@ -49,6 +49,10 @@ contract BeefyGems is ERC20Upgradeable, OwnableUpgradeable {
     /// @notice Get the price for a full share
     /// @return Price for a full share
     function getPriceForFullShare() external view returns (uint256) {
-        return IBeefyGemsFactory(factory).getPriceForFullShare(season);
+        return IBeefyGemsFactory(factory).getPriceForFullShare(_seasonNum);
+    }
+
+    function season() external view returns (uint256) {
+        return _seasonNum;
     }
 }

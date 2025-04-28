@@ -80,6 +80,19 @@ contract BeefyGemsTest is Test {
         vm.stopPrank();
     }
 
+    function test_top_up_season() public {
+        _createSeason(80_000_000e18);
+        _openSeason(1, 80_000_000e18 * 2);
+
+        vm.startPrank(factory.owner());
+        vm.deal(factory.owner(), 80_000_000e18 * 2);
+        factory.topUpSeason{value: 80_000_000e18 * 2}(1);
+        vm.stopPrank();
+
+        assertEq(factory.getSeason(1).amountOfS, 80_000_000e18 * 4);
+        assertEq(factory.getPriceForFullShare(1), 4e18);
+    }
+
     function test_burn_someone_elses_gems() public {
         _createSeason(80_000_000e18);
         _openSeason(1, 80_000_000e18 * 2);

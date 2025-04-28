@@ -25,7 +25,7 @@ contract BeefyGemsTest is Test {
 
     function test_open_season() public {
         _createSeason(80_000_000e18);
-        _openSeason(1, 180_000_000e18);
+        _openSeason(1, 80_000_000e18 * 2);
     }
 
     function test_redeem() public {
@@ -38,7 +38,7 @@ contract BeefyGemsTest is Test {
         vm.stopPrank();
 
         vm.startPrank(alice);
-        factory.redeem(1, 80e18);
+        factory.redeem(1, 80e18, alice);
         vm.stopPrank();
 
         assertEq(IERC20(address(factory.getSeason(1).gems)).balanceOf(address(alice)), 0);
@@ -58,7 +58,8 @@ contract BeefyGemsTest is Test {
         vm.stopPrank();
 
         vm.startPrank(alice);
-        factory.redeem(2, 80e18);
+        factory.redeem(2, 40e18, alice);
+        BeefyGems(factory.getSeason(2).gems).redeem(40e18);
         vm.stopPrank();
 
         assertEq(IERC20(address(factory.getSeason(2).gems)).balanceOf(address(alice)), 0);
@@ -75,7 +76,7 @@ contract BeefyGemsTest is Test {
 
         vm.startPrank(alice);
         vm.expectRevert(BeefyGemsFactory.RedemptionNotOpen.selector);
-        factory.redeem(1, 80e18);
+        factory.redeem(1, 80e18, alice);
         vm.stopPrank();
     }
 
@@ -104,7 +105,6 @@ contract BeefyGemsTest is Test {
         console.log("Season created ", BeefyGems(factory.getSeason(seasonNum + 1).gems).name());
         assertEq(factory.numSeasons(), seasonNum + 1);
         assertEq(factory.getSeason(seasonNum + 1).amountOfGems, _amountOfGems);
-        assertEq(factory.getSeason(seasonNum + 1).redemptionActive, false);
         assertEq(factory.getSeason(seasonNum + 1).amountOfS, 0);
         vm.stopPrank();
     }
@@ -113,8 +113,8 @@ contract BeefyGemsTest is Test {
         vm.startPrank(factory.owner());
         vm.deal(factory.owner(), _amountOfS);
         factory.openSeasonRedemption{value: _amountOfS}(_seasonNum);
-        assertEq(factory.getSeason(_seasonNum).redemptionActive, true);
         assertEq(factory.getSeason(_seasonNum).amountOfS, _amountOfS);
+        assertEq(factory.getPriceForFullShare(_seasonNum), 2e18);
         vm.stopPrank();
     }
 }

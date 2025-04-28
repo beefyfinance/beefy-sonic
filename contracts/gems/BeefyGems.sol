@@ -2,16 +2,17 @@
 pragma solidity 0.8.28;
 
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {IBeefyGemsFactory} from "../interfaces/IBeefyGemsFactory.sol";
 
 /// @title Beefy Gems
 /// @author Beefy, weso
 /// @dev Beefy Gems Season Program
-contract BeefyGems is ERC20Upgradeable, OwnableUpgradeable {
+contract BeefyGems is ERC20Upgradeable {
 
     address private factory;
     uint256 private _seasonNum;
+
+    error NotYourGems();
 
     /// @notice Initialize the contract
     /// @param _name Name of the token
@@ -27,7 +28,6 @@ contract BeefyGems is ERC20Upgradeable, OwnableUpgradeable {
         uint256 _season
     ) public initializer {
         __ERC20_init(_name, _symbol);
-        __Ownable_init(msg.sender);
         factory = msg.sender;
         _seasonNum = _season;
         _mint(_treasury, _amount);
@@ -42,7 +42,8 @@ contract BeefyGems is ERC20Upgradeable, OwnableUpgradeable {
     /// @notice Burn gems
     /// @param _amount Amount of gems to burn
     /// @param _who Address of the account to burn gems from
-    function burn(uint256 _amount, address _who) external onlyOwner {
+    function burn(uint256 _amount, address _who) external {
+        if (msg.sender != factory) revert NotYourGems();
         _burn(_who, _amount);
     }
 

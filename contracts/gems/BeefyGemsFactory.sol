@@ -18,7 +18,6 @@ contract BeefyGemsFactory is Ownable {
     struct Season {
         uint256 seasonNum;
         address gems;
-        uint256 amountOfGems;
         uint256 amountOfS;
     }
 
@@ -33,6 +32,7 @@ contract BeefyGemsFactory is Ownable {
     error NotEnoughS();
     error SeasonAlreadyOpen();
     error NotYourGems();
+    error NoMoreGems();
     
     constructor(
         address _treasury
@@ -62,7 +62,6 @@ contract BeefyGemsFactory is Ownable {
         Season memory season = Season({
             seasonNum: seasonNum,
             gems: gems,
-            amountOfGems: _amountOfGems,
             amountOfS: 0
         });
 
@@ -76,6 +75,7 @@ contract BeefyGemsFactory is Ownable {
     function openSeasonRedemption(uint256 seasonNum) external payable onlyOwner {
         Season storage season = seasons[seasonNum - 1];
         if (season.amountOfS > 0) revert SeasonAlreadyOpen();
+        if (BeefyGems(season.gems).totalSupply() == 0) revert NoMoreGems();
         if (msg.value == 0) revert NotEnoughS();
         season.amountOfS = msg.value;
 
@@ -86,6 +86,7 @@ contract BeefyGemsFactory is Ownable {
     /// @param seasonNum Season number
     function topUpSeason(uint256 seasonNum) external payable onlyOwner {
         Season storage season = seasons[seasonNum - 1];
+        if (season.amountOfS == 0) revert RedemptionNotOpen();
         season.amountOfS += msg.value;
 
         emit TopUpSeason(seasonNum, season.amountOfS);
@@ -110,11 +111,19 @@ contract BeefyGemsFactory is Ownable {
     function redeem(uint256 seasonNum, uint256 _amount, address _who) external payable {
         Season storage season = seasons[seasonNum - 1];
         if (msg.sender != _who && msg.sender != season.gems) revert NotYourGems();
-        if (season.amountOfS == 0) revert RedemptionNotOpen();
+        if (BeefyGems(season.gems).totalSupply() == 0) revert RedemptionNotOpen();
+        
+        uint256 seasonAmountOfS = season.amountOfS;
+        if (seasonAmountOfS == 0) revert RedemptionNotOpen();
 
-        uint256 r = (season.amountOfS * _amount) / season.amountOfGems;
+        uint256 totalSupply = BeefyGems(season.gems).totalSupply();
+
+        uint256 r = (seasonAmountOfS * _amount) / totalSupply;
         
         BeefyGems(season.gems).burn(_amount, _who);
+
+        if (r > seasonAmountOfS) r = seasonAmountOfS;
+        season.amountOfS -= r;
 
         (bool success, ) = _who.call{value: r}("");
         if (!success) revert NotEnoughS();
@@ -127,8 +136,9 @@ contract BeefyGemsFactory is Ownable {
     /// @return Price for a full share  
     function getPriceForFullShare(uint256 seasonNum) external view returns (uint256) {
         Season storage season = seasons[seasonNum - 1];
-        if (season.amountOfGems == 0) return 0;
-        return season.amountOfS * 1e18 / season.amountOfGems;
+        uint256 totalSupply = BeefyGems(season.gems).totalSupply();
+        if (totalSupply == 0) return 0;
+        return season.amountOfS * 1e18 / totalSupply;
     }
 
     receive() external payable onlyOwner {}

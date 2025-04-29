@@ -117,7 +117,7 @@ contract BeefyGemsTest is Test {
         factory.createSeason(_amountOfGems);
         console.log("Season created ", BeefyGems(factory.getSeason(seasonNum + 1).gems).name());
         assertEq(factory.numSeasons(), seasonNum + 1);
-        assertEq(factory.getSeason(seasonNum + 1).amountOfGems, _amountOfGems);
+        assertEq(BeefyGems(factory.getSeason(seasonNum + 1).gems).totalSupply(), _amountOfGems);
         assertEq(factory.getSeason(seasonNum + 1).amountOfS, 0);
         vm.stopPrank();
     }

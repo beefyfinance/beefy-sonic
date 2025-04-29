@@ -43,10 +43,10 @@ contract BeefyGemsFactory is Ownable {
 
     /// @notice Create a new season
     /// @param _amountOfGems Amount of gems to be minted
-    function createSeason(uint256 _amountOfGems) external onlyOwner {
+    function createSeason(uint256 _amountOfGems) external returns (address gems) {
         uint256 seasonNum = seasons.length + 1;
 
-        address gems = address(instance).clone();
+        gems = address(instance).clone();
 
         string memory name = string.concat("Beefy Gems Season ", Strings.toString(seasonNum));
         string memory symbol = string.concat("beGEMS", Strings.toString(seasonNum));

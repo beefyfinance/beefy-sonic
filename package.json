@@ -11,6 +11,7 @@
     "coverage": "forge coverage",
     "coverage:lcov": "forge coverage --report lcov",
     "deploy": "forge script script/Deploy.s.sol --rpc-url $SONIC_RPC --private-key $DEPLOYER_PK --broadcast",
+    "deploy:gems": "forge script script/BeefyGems.s.sol --rpc-url $SONIC_RPC --private-key $DEPLOYER_PK --broadcast",
     "test:slither": "slither . --config slither.config.json",
     "test:gambit:gen": "./test/mutation/gambit.sh generate ./contracts/BeefySonic.sol",
     "test:gambit:run": "./test/mutation/gambit.sh test 8",

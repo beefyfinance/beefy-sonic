@@ -108,7 +108,8 @@ contract BeefyGemsFactory is Ownable {
     /// @notice Redeem gems for S
     /// @param seasonNum Season number
     /// @param _amount Amount of gems to redeem
-    function redeem(uint256 seasonNum, uint256 _amount, address _who) external payable {
+    /// @param _who Address of the account to redeem gems from
+    function redeem(uint256 seasonNum, uint256 _amount, address _who) external {
         Season storage season = seasons[seasonNum - 1];
         if (msg.sender != _who && msg.sender != season.gems) revert NotYourGems();
         if (BeefyGems(season.gems).totalSupply() == 0) revert RedemptionNotOpen();
@@ -122,13 +123,22 @@ contract BeefyGemsFactory is Ownable {
         
         BeefyGems(season.gems).burn(_amount, _who);
 
-        if (r > seasonAmountOfS) r = seasonAmountOfS;
         season.amountOfS -= r;
 
         (bool success, ) = _who.call{value: r}("");
         if (!success) revert NotEnoughS();
 
         emit Redeemed(_who, seasonNum, _amount, r);
+    }
+
+    /// @notice Recover S from a season
+    /// @param seasonNum Season number
+    function recoverS(uint256 seasonNum) external onlyOwner {
+        Season storage season = seasons[seasonNum - 1];
+        uint256 seasonAmountOfS = season.amountOfS;
+        season.amountOfS = 0;
+        (bool success, ) = msg.sender.call{value: seasonAmountOfS}("");
+        if (!success) revert NotEnoughS();
     }
 
     /// @notice Get the price for a full share

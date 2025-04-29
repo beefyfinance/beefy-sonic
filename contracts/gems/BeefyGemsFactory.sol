@@ -119,16 +119,16 @@ contract BeefyGemsFactory is Ownable {
 
         uint256 totalSupply = BeefyGems(season.gems).totalSupply();
 
-        uint256 r = (seasonAmountOfS * _amount) / totalSupply;
+        uint256 sAmount = (seasonAmountOfS * _amount) / totalSupply;
         
         BeefyGems(season.gems).burn(_amount, _who);
 
-        season.amountOfS -= r;
+        season.amountOfS -= sAmount;
 
-        (bool success, ) = _who.call{value: r}("");
+        (bool success, ) = _who.call{value: sAmount}("");
         if (!success) revert NotEnoughS();
 
-        emit Redeemed(_who, seasonNum, _amount, r);
+        emit Redeemed(_who, seasonNum, _amount, sAmount);
     }
 
     /// @notice Recover S from a season

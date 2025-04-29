@@ -5,7 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {BeefySonic} from "../contracts/BeefySonic.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-contract CounterScript is Script {
+contract BeefySonicScript is Script {
     address public want = address(0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38);
     address public stakingContract = address(0xFC00FACE00000000000000000000000000000000);
     address public beefyFeeRecipient = address(0x02Ae4716B9D5d48Db1445814b0eDE39f5c28264B);
